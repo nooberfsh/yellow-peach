@@ -1,11 +1,12 @@
 #[derive(Debug, Clone)]
 pub struct Grammar {
-    rules: Vec<Rule>,
+    pub rules: Vec<Rule>,
 }
 
 #[derive(Debug, Clone)]
 pub struct Rule {
-    name: String,
+    pub name: String,
+    pub kind: RuleKind,
 }
 
 #[derive(Debug, Clone)]
@@ -17,14 +18,14 @@ pub enum RuleKind {
 
 #[derive(Debug, Clone)]
 pub struct RuleBody {
-    body: Vec<RuleElement>,
+    pub body: Vec<RuleElement>,
 }
 
 #[derive(Debug, Clone)]
 pub struct RuleElement {
-    name: Option<String>,
-    nt: String,
-    quantifier: Option<Quantifier>,
+    pub name: Option<String>,
+    pub nt: String,
+    pub quantifier: Option<Quantifier>,
 }
 
 #[derive(Debug, Clone)]

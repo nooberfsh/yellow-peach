@@ -1,9 +1,10 @@
 use std::error::Error;
 use std::fmt;
 
-use crate::token::Token;
+use crate::token::{Token, TokenKind};
 use crate::span::Span;
 use crate::lexer::{Lexer, LexError, Chars};
+use crate::ast::{Grammar, Rule, RuleBody, RuleElement, Quantifier};
 
 #[derive(Debug)]
 pub struct ParseError {
@@ -55,5 +56,27 @@ impl Parser {
             start:  0,
             cursor: 0,
         })
+    }
+}
+
+impl Parser {
+    pub fn parse_grammar(&mut self) -> Result<Grammar> {
+        todo!()
+    }
+
+    pub fn parse_rule(&mut self) -> Result<Rule> {
+        todo!()
+    }
+
+    pub fn parse_rule_body(&mut self) -> Result<RuleBody> {
+        todo!()
+    }
+
+    pub fn parse_rule_element(&mut self) -> Result<RuleElement> {
+        todo!()
+    }
+
+    pub fn parse_quantifier(&mut self) -> Result<Quantifier> {
+        todo!()
     }
 }

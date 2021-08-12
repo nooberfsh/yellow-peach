@@ -1,8 +1,10 @@
 use std::error::Error;
 use std::fmt;
+use std::sync::Arc;
 
 use crate::span::Span;
 use crate::token::*;
+use std::ops::Deref;
 
 #[derive(Debug)]
 pub struct LexError {
@@ -32,21 +34,36 @@ pub type Result<T> = std::result::Result<T, LexError>;
 
 #[derive(Debug)]
 pub struct Lexer {
-    chars: Vec<char>,
+    chars: Chars,
     cursor: usize,
     start: usize,
 }
 
+#[derive(Debug, Clone)]
+pub struct Chars(Arc<Vec<char>>);
+
+impl Deref for Chars {
+    type Target = [char];
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
 impl Lexer {
     pub fn new(input: &str) -> Self {
+        let chars: Vec<_> = input.chars().collect();
         Lexer {
-            chars: input.chars().collect(),
+            chars: Chars(Arc::new(chars)),
             cursor: 0,
             start: 0,
         }
     }
 
-    pub fn tokens(mut self) -> Result<Vec<Token>> {
+    pub fn chars(&self) -> Chars {
+        self.chars.clone()
+    }
+
+    pub fn tokens(&mut self) -> Result<Vec<Token>> {
         let mut ret = vec![];
         while let Some(t) = self.next()? {
             ret.push(t);
@@ -68,7 +85,7 @@ impl Lexer {
             ';' => TokenKind::Semicolon,
             c if is_letter(c) => {
                 self.advance_while(is_digit_letter);
-                let s = &self.chars[self.start..self.cursor];
+                let s = &self.chars.0[self.start..self.cursor];
                 TokenKind::Name(s.iter().collect())
             }
             c if is_digit(c) => return Err(self.make_error(LexErrorKind::NameStartWithDigit(c))),

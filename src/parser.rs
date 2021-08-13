@@ -4,7 +4,7 @@ use std::fmt;
 use crate::token::{Token, TokenKind};
 use crate::span::Span;
 use crate::lexer::{Lexer, LexError, Chars};
-use crate::ast::{Grammar, Rule, RuleBody, RuleElement, Quantifier};
+use crate::ast::{Grammar, Rule, RuleBody, RuleElement, Quantifier, N, IdGen, Ident};
 
 #[derive(Debug)]
 pub struct ParseError {
@@ -25,8 +25,11 @@ impl Error for ParseError {
 }
 
 #[derive(Debug)]
-enum ParseErrorKind {
-    LexError(LexError)
+pub enum ParseErrorKind {
+    LexError(LexError),
+    //(expected, found),
+    UnexpectedToken(TokenKind, Token),
+    Eof,
 }
 
 pub type Result<T> = std::result::Result<T, ParseError>;
@@ -36,7 +39,8 @@ pub struct Parser {
     chars: Chars,
     tokens: Vec<Token>,
     // state
-    start: usize,
+    id_gen: IdGen,
+    call_stack: Vec<usize>,
     cursor: usize,
 }
 
@@ -53,30 +57,142 @@ impl Parser {
         Ok(Parser {
             chars,
             tokens,
-            start:  0,
+            id_gen: IdGen::new(),
+            call_stack:  vec![],
             cursor: 0,
         })
     }
 }
 
 impl Parser {
-    pub fn parse_grammar(&mut self) -> Result<Grammar> {
+    pub fn parse<T>(&mut self, f: impl Fn(&mut Parser) -> Result<T>) -> Result<N<T>> {
+        self.call_stack.push(self.cursor);
+
+        if self.eof() {
+            let e = self.make_err(ParseErrorKind::Eof);
+            self.pop_stack();
+            return e;
+        }
+
+        match f(self) {
+            Ok(d) => Ok(self.make_node(d)),
+            Err(e) => {
+                self.pop_stack();
+                Err(e)
+            },
+        }
+    }
+
+    pub fn parse_grammar(&mut self) -> Result<N<Grammar>> {
         todo!()
     }
 
-    pub fn parse_rule(&mut self) -> Result<Rule> {
+    pub fn parse_rule(&mut self) -> Result<N<Rule>> {
         todo!()
     }
 
-    pub fn parse_rule_body(&mut self) -> Result<RuleBody> {
+    pub fn parse_rule_body(&mut self) -> Result<N<RuleBody>> {
         todo!()
     }
 
-    pub fn parse_rule_element(&mut self) -> Result<RuleElement> {
+    pub fn parse_rule_element(&mut self) -> Result<N<RuleElement>> {
         todo!()
     }
 
-    pub fn parse_quantifier(&mut self) -> Result<Quantifier> {
+    pub fn parse_quantifier(&mut self) -> Result<N<Quantifier>> {
         todo!()
+    }
+
+    pub fn parse_ident(&mut self) -> Result<N<Ident>> {
+        self.parse(|parser| {
+            let d = parser.expect(TokenKind::Ident)?;
+            let name = parser.get_string(d.span);
+            Ok(Ident {name})
+        })
+    }
+}
+
+impl Parser {
+    pub fn expect(&mut self, expected: TokenKind) -> Result<Token> {
+        let d = self.advance().unwrap();
+        if d.kind == expected {
+            Ok(d)
+        } else {
+            let kind = ParseErrorKind::UnexpectedToken(expected, d);
+            self.make_err(kind)
+        }
+    }
+
+    pub fn get_string(&self, span: Span) -> String {
+        let s = &self.chars[span.start()..span.end()];
+        s.iter().collect()
+    }
+}
+
+impl Parser {
+    fn assert_call_stack(&self) {
+        assert!(!self.call_stack.is_empty(), "not int call stack")
+    }
+
+    fn pop_stack(&mut self) -> Option<usize> {
+        self.call_stack.pop()
+    }
+
+    pub fn eof(&self) -> bool {
+        self.cursor == self.tokens.len()
+    }
+
+    fn peek(&self) -> Option<Token> {
+        if self.eof() {
+            None
+        } else {
+            Some(self.tokens[self.cursor])
+        }
+    }
+
+    fn advance(&mut self) -> Option<Token> {
+        if self.eof() {
+            None
+        } else {
+            let c = self.tokens[self.cursor];
+            self.cursor += 1;
+            Some(c)
+        }
+    }
+
+    pub fn current_span(&self) -> Option<Span> {
+        if let Some(start) = self.call_stack.last() {
+            if start < &self.cursor {
+                let start = self.tokens[*start].span;
+                let end = self.tokens[self.cursor - 1].span;
+                Some(start.merge(end))
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
+
+    pub fn make_node<T>(&self, t: T) -> N<T> {
+        self.assert_call_stack();
+        assert!(self.call_stack.last().unwrap() < &self.cursor);
+
+        let id = self.id_gen.next();
+        let span = self.current_span().unwrap();
+        let ret = N {
+            id,
+            span,
+            t
+        };
+        ret
+    }
+
+    pub fn make_err<T>(&self, kind: ParseErrorKind) -> Result<T> {
+        let span = self.current_span();
+        Err(ParseError {
+            span,
+            kind,
+        })
     }
 }

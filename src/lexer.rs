@@ -85,8 +85,7 @@ impl Lexer {
             ';' => TokenKind::Semicolon,
             c if is_letter(c) => {
                 self.advance_while(is_digit_letter);
-                let s = &self.chars.0[self.start..self.cursor];
-                TokenKind::Name(s.iter().collect())
+                TokenKind::Ident
             }
             c if is_digit(c) => return Err(self.make_error(LexErrorKind::NameStartWithDigit(c))),
             c => return Err(self.make_error(LexErrorKind::UnknownChar(c))),

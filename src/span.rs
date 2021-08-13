@@ -18,7 +18,7 @@ impl Span {
         self.end
     }
 
-    pub fn merge(&self, other: &Span) -> Span {
+    pub fn merge(&self, other: Span) -> Span {
         let start = self.start;
         let end = other.end;
         Self::new(start, end)
@@ -33,8 +33,7 @@ mod tests {
     fn test_merge() {
         let (start, end) = (1,3);
         let a = Span {start,end };
-        let b = a;
-        let res = a.merge(&b);
+        let res = a.merge(a);
         assert_eq!(res, a);
     }
 }

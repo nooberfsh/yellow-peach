@@ -43,18 +43,18 @@ pub enum ParseErrorKind {
 pub type Result<T> = std::result::Result<T, ParseError>;
 
 #[derive(Clone, Debug)]
-pub struct IdGen {
+struct IdGen {
     id: Arc<AtomicUsize>,
 }
 
 impl IdGen {
-    pub fn new() -> Self {
+    fn new() -> Self {
         IdGen {
             id: Arc::new(AtomicUsize::new(0)),
         }
     }
 
-    pub fn next(&self) -> NodeId {
+    fn next(&self) -> NodeId {
         let id = self.id.fetch_add(1, Ordering::Relaxed);
         NodeId(id)
     }
@@ -70,6 +70,17 @@ pub struct Parser {
     cursor: usize,
 }
 
+fn remove_junk(tokens: &[Token]) -> Vec<Token> {
+    let mut ret = vec![];
+    for t in tokens {
+        match t.kind {
+            TokenKind::Whitespace(_) => {}
+            _ => ret.push(*t),
+        }
+    }
+    ret
+}
+
 impl Parser {
     pub fn new(mut lexer: Lexer) -> Result<Self> {
         let tokens = match lexer.tokens() {
@@ -81,6 +92,7 @@ impl Parser {
                 })
             }
         };
+        let tokens = remove_junk(&tokens);
         let chars = lexer.chars();
         Ok(Parser {
             chars,
@@ -93,7 +105,7 @@ impl Parser {
 }
 
 impl Parser {
-    pub fn parse<T>(&mut self, f: impl Fn(&mut Parser) -> Result<T>) -> Result<N<T>> {
+    fn parse<T>(&mut self, f: impl Fn(&mut Parser) -> Result<T>) -> Result<N<T>> {
         let cursor = self.cursor;
         self.call_stack.push(self.cursor);
 
@@ -239,7 +251,7 @@ impl Parser {
 }
 
 impl Parser {
-    pub fn expect(&mut self, expected: TokenKind) -> Result<Token> {
+    fn expect(&mut self, expected: TokenKind) -> Result<Token> {
         let d = match self.advance() {
             Some(d) => d,
             None => return self.make_err(ParseErrorKind::UnexpectedToken(expected, None)),
@@ -252,7 +264,7 @@ impl Parser {
         }
     }
 
-    pub fn expect_one_of(&mut self, expected: &[TokenKind]) -> Result<Token> {
+    fn expect_one_of(&mut self, expected: &[TokenKind]) -> Result<Token> {
         let d = match self.advance() {
             Some(d) => d,
             None => {
@@ -273,7 +285,7 @@ impl Parser {
         }
     }
 
-    pub fn get_string(&self, span: Span) -> String {
+    fn get_string(&self, span: Span) -> String {
         let s = &self.chars[span.start()..span.end()];
         s.iter().collect()
     }
@@ -288,7 +300,7 @@ impl Parser {
         self.call_stack.pop()
     }
 
-    pub fn eof(&self) -> bool {
+    fn eof(&self) -> bool {
         self.cursor == self.tokens.len()
     }
 
@@ -328,7 +340,7 @@ impl Parser {
         }
     }
 
-    pub fn current_span(&self) -> Option<Span> {
+    fn current_span(&self) -> Option<Span> {
         if let Some(start) = self.call_stack.last() {
             if start < &self.cursor {
                 let start = self.tokens[*start].span;
@@ -342,7 +354,7 @@ impl Parser {
         }
     }
 
-    pub fn make_node<T>(&self, t: T) -> N<T> {
+    fn make_node<T>(&self, t: T) -> N<T> {
         self.assert_call_stack();
         assert!(self.call_stack.last().unwrap() < &self.cursor);
 
@@ -352,7 +364,7 @@ impl Parser {
         ret
     }
 
-    pub fn make_err<T>(&self, kind: ParseErrorKind) -> Result<T> {
+    fn make_err<T>(&self, kind: ParseErrorKind) -> Result<T> {
         let span = self.current_span();
         Err(ParseError { span, kind })
     }

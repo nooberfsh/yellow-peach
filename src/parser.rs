@@ -213,8 +213,13 @@ impl Parser {
 
     pub fn parse_rule_element(&mut self) -> Result<N<RuleElement>> {
         self.parse(|parser| {
-            let name = parser.parse_ident().ok();
-            let nt = parser.parse_ident()?;
+            let name = parser.parse_ident()?;
+            let (name, nt) = if parser.cmp_advance(TokenKind::Assign) {
+                let nt = parser.parse_ident()?;
+                (Some(name), nt)
+            } else {
+                (None, name)
+            };
             let quantifier = parser.parse_quantifier().ok();
             Ok(RuleElement {
                 name,

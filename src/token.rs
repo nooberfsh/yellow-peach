@@ -15,6 +15,7 @@ pub enum TokenKind {
     Semicolon,
     NumSign,
     Alt,
+    Assign,
     Ident,
     Whitespace(Whitespace),
 }

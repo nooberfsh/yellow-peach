@@ -85,6 +85,7 @@ impl Lexer {
             ';' => TokenKind::Semicolon,
             '#' => TokenKind::NumSign,
             '|' => TokenKind::Alt,
+            '=' => TokenKind::Assign,
             ' ' => TokenKind::Whitespace(Whitespace::Space),
             '\n' => TokenKind::Whitespace(Whitespace::Newline),
             '\r' => TokenKind::Whitespace(Whitespace::CarriageReturn),

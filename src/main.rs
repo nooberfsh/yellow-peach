@@ -1,8 +1,8 @@
 pub mod ast;
-pub mod token;
-pub mod span;
 pub mod lexer;
 pub mod parser;
+pub mod span;
+pub mod token;
 
 fn main() {
     println!("Hello, world!");

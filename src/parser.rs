@@ -1,10 +1,12 @@
 use std::error::Error;
 use std::fmt;
 
-use crate::token::{Token, TokenKind};
+use crate::ast::{
+    Grammar, IdGen, Ident, NamedRuleBody, Quantifier, Rule, RuleBody, RuleElement, RuleKind, N,
+};
+use crate::lexer::{Chars, LexError, Lexer};
 use crate::span::Span;
-use crate::lexer::{Lexer, LexError, Chars};
-use crate::ast::{Grammar, Rule, RuleBody, RuleElement, Quantifier, N, IdGen, Ident, RuleKind, NamedRuleBody};
+use crate::token::{Token, TokenKind};
 
 #[derive(Debug)]
 pub struct ParseError {
@@ -52,17 +54,19 @@ impl Parser {
     pub fn new(mut lexer: Lexer) -> Result<Self> {
         let tokens = match lexer.tokens() {
             Ok(d) => d,
-            Err(e) => return Err(ParseError{
-                span: None,
-                kind: ParseErrorKind::LexError(e),
-            })
+            Err(e) => {
+                return Err(ParseError {
+                    span: None,
+                    kind: ParseErrorKind::LexError(e),
+                })
+            }
         };
         let chars = lexer.chars();
         Ok(Parser {
             chars,
             tokens,
             id_gen: IdGen::new(),
-            call_stack:  vec![],
+            call_stack: vec![],
             cursor: 0,
         })
     }
@@ -84,7 +88,7 @@ impl Parser {
             Err(e) => {
                 self.cursor = cursor;
                 Err(e)
-            },
+            }
         };
         self.pop_stack();
         ret
@@ -106,7 +110,8 @@ impl Parser {
                     Err(e) => {
                         self.back();
                         let sep = self.peek().unwrap();
-                        return self.make_err(ParseErrorKind::DuplicatedSepOrParseError(sep, Box::new(e)))
+                        return self
+                            .make_err(ParseErrorKind::DuplicatedSepOrParseError(sep, Box::new(e)));
                     }
                 }
             }
@@ -122,7 +127,7 @@ impl Parser {
     pub fn parse_grammar(&mut self) -> Result<N<Grammar>> {
         self.parse(|parser| {
             let rules = parser.parse_some(|p| p.parse_rule(), None)?;
-            Ok(Grammar {rules})
+            Ok(Grammar { rules })
         })
     }
 
@@ -140,9 +145,10 @@ impl Parser {
                     if parser.cmp_advance(TokenKind::NumSign) {
                         let name = parser.parse_ident()?;
                         parser.expect(TokenKind::Alt)?;
-                        let node = parser.make_node(NamedRuleBody{name, body});
+                        let node = parser.make_node(NamedRuleBody { name, body });
                         let mut alts = vec![node];
-                        let rest = parser.parse_some(|p| p.parse_named_rule_body(), Some(TokenKind::Alt))?;
+                        let rest = parser
+                            .parse_some(|p| p.parse_named_rule_body(), Some(TokenKind::Alt))?;
                         parser.expect(TokenKind::Semicolon)?;
                         alts.extend(rest);
                         RuleKind::Enum(alts)
@@ -151,11 +157,9 @@ impl Parser {
                         RuleKind::Normal(body)
                     }
                 }
-                _ => unreachable!()
+                _ => unreachable!(),
             };
-            Ok(Rule {
-                name, kind
-            })
+            Ok(Rule { name, kind })
         })
     }
 
@@ -164,16 +168,14 @@ impl Parser {
             let body = parser.parse_rule_body()?;
             parser.expect(TokenKind::NumSign)?;
             let name = parser.parse_ident()?;
-            Ok(NamedRuleBody {
-                name, body
-            })
+            Ok(NamedRuleBody { name, body })
         })
     }
 
     pub fn parse_rule_body(&mut self) -> Result<N<RuleBody>> {
         self.parse(|parser| {
             let body = parser.parse_some(|p| p.parse_rule_element(), None)?;
-            Ok(RuleBody {body})
+            Ok(RuleBody { body })
         })
     }
 
@@ -183,19 +185,25 @@ impl Parser {
             let nt = parser.parse_ident()?;
             let quantifier = parser.parse_quantifier().ok();
             Ok(RuleElement {
-                name, nt, quantifier
+                name,
+                nt,
+                quantifier,
             })
         })
     }
 
     pub fn parse_quantifier(&mut self) -> Result<N<Quantifier>> {
         self.parse(|parser| {
-            let d = parser.expect_one_of(&[TokenKind::Question, TokenKind::Asterisk, TokenKind::Plus])?;
+            let d = parser.expect_one_of(&[
+                TokenKind::Question,
+                TokenKind::Asterisk,
+                TokenKind::Plus,
+            ])?;
             let quantifier = match d.kind {
                 TokenKind::Question => Quantifier::Maybe,
                 TokenKind::Asterisk => Quantifier::Multi,
                 TokenKind::Plus => Quantifier::AtLeastOne,
-                _ => unreachable!()
+                _ => unreachable!(),
             };
             Ok(quantifier)
         })
@@ -205,7 +213,7 @@ impl Parser {
         self.parse(|parser| {
             let d = parser.expect(TokenKind::Ident)?;
             let name = parser.get_string(d.span);
-            Ok(Ident {name})
+            Ok(Ident { name })
         })
     }
 }
@@ -213,8 +221,8 @@ impl Parser {
 impl Parser {
     pub fn expect(&mut self, expected: TokenKind) -> Result<Token> {
         let d = match self.advance() {
-            Some(d)   => d,
-            None => return self.make_err(ParseErrorKind::UnexpectedToken(expected, None))
+            Some(d) => d,
+            None => return self.make_err(ParseErrorKind::UnexpectedToken(expected, None)),
         };
         if d.kind == expected {
             Ok(d)
@@ -226,14 +234,22 @@ impl Parser {
 
     pub fn expect_one_of(&mut self, expected: &[TokenKind]) -> Result<Token> {
         let d = match self.advance() {
-            Some(d)   => d,
-            None => return self.make_err(ParseErrorKind::UnexpectedTokenMulti(expected.to_vec(), None))
+            Some(d) => d,
+            None => {
+                return self.make_err(ParseErrorKind::UnexpectedTokenMulti(
+                    expected.to_vec(),
+                    None,
+                ))
+            }
         };
 
-        if expected.iter().find(|e| *e == &d.kind).is_some()  {
+        if expected.iter().find(|e| *e == &d.kind).is_some() {
             Ok(d)
         } else {
-            self.make_err(ParseErrorKind::UnexpectedTokenMulti(expected.to_vec(), Some(d)))
+            self.make_err(ParseErrorKind::UnexpectedTokenMulti(
+                expected.to_vec(),
+                Some(d),
+            ))
         }
     }
 
@@ -312,19 +328,12 @@ impl Parser {
 
         let id = self.id_gen.next();
         let span = self.current_span().unwrap();
-        let ret = N {
-            id,
-            span,
-            t
-        };
+        let ret = N { id, span, t };
         ret
     }
 
     pub fn make_err<T>(&self, kind: ParseErrorKind) -> Result<T> {
         let span = self.current_span();
-        Err(ParseError {
-            span,
-            kind,
-        })
+        Err(ParseError { span, kind })
     }
 }

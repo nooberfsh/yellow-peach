@@ -31,8 +31,8 @@ mod tests {
 
     #[test]
     fn test_merge() {
-        let (start, end) = (1,3);
-        let a = Span {start,end };
+        let (start, end) = (1, 3);
+        let a = Span { start, end };
         let res = a.merge(a);
         assert_eq!(res, a);
     }

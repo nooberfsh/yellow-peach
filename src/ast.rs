@@ -1,6 +1,6 @@
 use crate::span::Span;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
 
 #[derive(Debug, Clone, Copy)]
 pub struct NodeId(usize);
@@ -67,7 +67,7 @@ pub struct RuleElement {
 }
 
 #[derive(Debug, Clone)]
-pub enum Quantifier{
+pub enum Quantifier {
     /// ?
     Maybe,
     /// *
@@ -78,5 +78,5 @@ pub enum Quantifier{
 
 #[derive(Debug, Clone)]
 pub struct Ident {
-    pub name: String
+    pub name: String,
 }

@@ -31,6 +31,8 @@ pub enum ParseErrorKind {
     UnexpectedToken(TokenKind, Option<Token>),
     //(Vec<expected>, found?),
     UnexpectedTokenMulti(Vec<TokenKind>, Option<Token>),
+    // (sep, error)
+    DuplicatedSepOrParseError(Token, Box<ParseError>),
     Eof,
 }
 
@@ -101,7 +103,11 @@ impl Parser {
             while self.cmp_advance(d) {
                 match f(self) {
                     Ok(d) => ret.push(d),
-                    Err(_) => break,
+                    Err(e) => {
+                        self.back();
+                        let sep = self.peek().unwrap();
+                        return self.make_err(ParseErrorKind::DuplicatedSepOrParseError(sep, Box::new(e)))
+                    }
                 }
             }
         } else {

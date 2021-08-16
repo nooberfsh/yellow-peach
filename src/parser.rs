@@ -88,7 +88,7 @@ impl Parser {
         ret
     }
 
-    pub fn parse_opt<T>(&mut self, f: impl Fn(&mut Parser) -> Result<T>) -> Option<N<T>> {
+    pub fn parse_opt<T>(&mut self, f: impl Fn(&mut Parser) -> Result<N<T>>) -> Option<N<T>> {
         if self.eof() {
             return None
         }
@@ -97,7 +97,7 @@ impl Parser {
         self.call_stack.push(cursor);
 
         let ret = match f(self) {
-            Ok(d) => Some(self.make_node(d)),
+            Ok(d) => Some(d),
             Err(_) => {
                 self.cursor = cursor;
                 None
@@ -120,7 +120,14 @@ impl Parser {
     }
 
     pub fn parse_rule_element(&mut self) -> Result<N<RuleElement>> {
-        todo!()
+        self.parse(|parser| {
+            let name = parser.parse_opt(|p| p.parse_ident());
+            let nt = parser.parse_ident()?;
+            let quantifier = parser.parse_opt(|p|p.parse_quantifier());
+            Ok(RuleElement {
+                name, nt, quantifier
+            })
+        })
     }
 
     pub fn parse_quantifier(&mut self) -> Result<N<Quantifier>> {

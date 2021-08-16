@@ -11,6 +11,7 @@ pub mod token;
 
 fn main() {
     println!("Hello, world!");
+    //let s = std::fs::read_to_string("grammars/sql.yp").unwrap();
     let s = std::fs::read_to_string("test.yp").unwrap();
     let lexer = Lexer::new(&s);
     let mut parser = Parser::new(lexer).unwrap();

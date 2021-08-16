@@ -1,0 +1,23 @@
+query
+    : query_spec order_by?
+    ;
+
+query_spec
+    : select from? where? group_by?
+    ;
+
+select
+    : select_item+
+    ;
+
+from
+    : relation
+    ;
+
+relation
+    : qualified_name relation_alias?                # qualified_name
+    | query relation_alias?                         # sub_query
+    | relation join_type relation join_criteria     # join
+    ;
+
+

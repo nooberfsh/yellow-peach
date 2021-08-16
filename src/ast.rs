@@ -1,6 +1,7 @@
 use std::fmt;
 
 use crate::span::Span;
+use std::ops::Deref;
 
 #[derive(Debug, Clone, Copy)]
 pub struct NodeId(pub(crate) usize);
@@ -15,6 +16,13 @@ pub struct N<T> {
 impl<T: fmt::Debug> fmt::Debug for N<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.t.fmt(f)
+    }
+}
+
+impl<T> Deref for N<T> {
+    type Target = T;
+    fn deref(&self) -> &Self::Target {
+        &self.t
     }
 }
 
@@ -66,4 +74,21 @@ pub enum Quantifier {
 #[derive(Debug, Clone)]
 pub struct Ident {
     pub name: String,
+}
+
+impl Quantifier {
+    pub fn to_str(&self) -> &str {
+        use Quantifier::*;
+        match self {
+            Maybe => "?",
+            Multi => "*",
+            AtLeastOne => "+",
+        }
+    }
+}
+
+impl Ident {
+    pub fn to_str(&self) -> &str {
+        &self.name
+    }
 }

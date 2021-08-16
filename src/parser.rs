@@ -179,12 +179,16 @@ impl Parser {
     }
 
     pub fn parse_rule(&mut self) -> Result<N<Rule>> {
-        fn parse_alts(parser: &mut Parser, name: N<Ident>, body: Option<N<RuleBody>>)-> Result<RuleKind> {
-            let head = parser.make_node(NamedRuleBody { name, body});
+        fn parse_alts(
+            parser: &mut Parser,
+            name: N<Ident>,
+            body: Option<N<RuleBody>>,
+        ) -> Result<RuleKind> {
+            let head = parser.make_node(NamedRuleBody { name, body });
             let mut alts = vec![head];
             if parser.cmp_advance(TokenKind::Alt) {
-                let rest = parser
-                    .parse_some(|p| p.parse_named_rule_body(), Some(TokenKind::Alt))?;
+                let rest =
+                    parser.parse_some(|p| p.parse_named_rule_body(), Some(TokenKind::Alt))?;
                 parser.expect(TokenKind::Semicolon)?;
                 alts.extend(rest);
             } else {

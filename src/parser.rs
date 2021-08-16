@@ -88,6 +88,31 @@ impl Parser {
         ret
     }
 
+    // one or more
+    fn parse_some<T>(
+        &mut self,
+        f: impl Fn(&mut Parser) -> Result<T>,
+        sep: Option<TokenKind>,
+    ) -> Result<Vec<T>> {
+        let d = f(self)?;
+        let mut ret = vec![d];
+
+        if let Some(d) = sep {
+            while self.cmp_advance(d) {
+                match f(self) {
+                    Ok(d) => ret.push(d),
+                    Err(_) => break,
+                }
+            }
+        } else {
+            while let Ok(d) = f(self) {
+                ret.push(d)
+            }
+        }
+
+        Ok(ret)
+    }
+
     pub fn parse_grammar(&mut self) -> Result<N<Grammar>> {
         todo!()
     }
@@ -97,7 +122,10 @@ impl Parser {
     }
 
     pub fn parse_rule_body(&mut self) -> Result<N<RuleBody>> {
-        todo!()
+        self.parse(|parser| {
+            let body = parser.parse_some(|p| p.parse_rule_element(), None)?;
+            Ok(RuleBody {body})
+        })
     }
 
     pub fn parse_rule_element(&mut self) -> Result<N<RuleElement>> {
@@ -185,6 +213,20 @@ impl Parser {
         } else {
             Some(self.tokens[self.cursor])
         }
+    }
+
+    fn advance_if(&mut self, p: impl Fn(TokenKind) -> bool) -> bool {
+        if let Some(c) = self.peek() {
+            if p(c.kind) {
+                self.cursor += 1;
+                return true;
+            }
+        }
+        false
+    }
+
+    fn cmp_advance(&mut self, ty: TokenKind) -> bool {
+        self.advance_if(|x| x == ty)
     }
 
     fn advance(&mut self) -> Option<Token> {

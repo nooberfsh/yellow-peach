@@ -179,27 +179,37 @@ impl Parser {
     }
 
     pub fn parse_rule(&mut self) -> Result<N<Rule>> {
+        fn parse_alts(parser: &mut Parser, name: N<Ident>, body: Option<N<RuleBody>>)-> Result<RuleKind> {
+            let head = parser.make_node(NamedRuleBody { name, body});
+            let mut alts = vec![head];
+            if parser.cmp_advance(TokenKind::Alt) {
+                let rest = parser
+                    .parse_some(|p| p.parse_named_rule_body(), Some(TokenKind::Alt))?;
+                parser.expect(TokenKind::Semicolon)?;
+                alts.extend(rest);
+            } else {
+                parser.expect(TokenKind::Semicolon)?;
+            }
+            Ok(RuleKind::Enum(alts))
+        }
+
         self.parse(|parser| {
             let name = parser.parse_ident()?;
             parser.expect(TokenKind::Colon)?;
 
-            let token = parser.expect_one_of(&[TokenKind::Semicolon, TokenKind::Ident])?;
+            let token = parser.expect_one_of(&[TokenKind::NumSign, TokenKind::Ident])?;
             let kind = match token.kind {
-                TokenKind::Semicolon => RuleKind::Empty,
+                TokenKind::NumSign => {
+                    let name = parser.parse_ident()?;
+                    parse_alts(parser, name, None)?
+                }
                 TokenKind::Ident => {
                     parser.back();
                     let body = parser.parse_rule_body()?;
                     if parser.cmp_advance(TokenKind::NumSign) {
                         let name = parser.parse_ident()?;
                         parser.expect(TokenKind::Alt)?;
-                        let body = Some(body);
-                        let node = parser.make_node(NamedRuleBody { name, body });
-                        let mut alts = vec![node];
-                        let rest = parser
-                            .parse_some(|p| p.parse_named_rule_body(), Some(TokenKind::Alt))?;
-                        parser.expect(TokenKind::Semicolon)?;
-                        alts.extend(rest);
-                        RuleKind::Enum(alts)
+                        parse_alts(parser, name, Some(body))?
                     } else {
                         parser.expect(TokenKind::Semicolon)?;
                         RuleKind::Normal(body)

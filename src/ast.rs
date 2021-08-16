@@ -33,7 +33,6 @@ pub struct Rule {
 pub enum RuleKind {
     Enum(Vec<N<NamedRuleBody>>),
     Normal(N<RuleBody>),
-    Empty,
 }
 
 #[derive(Debug, Clone)]

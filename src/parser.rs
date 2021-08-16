@@ -27,8 +27,10 @@ impl Error for ParseError {
 #[derive(Debug)]
 pub enum ParseErrorKind {
     LexError(LexError),
-    //(expected, found),
-    UnexpectedToken(TokenKind, Token),
+    //(expected, found?), None means eof
+    UnexpectedToken(TokenKind, Option<Token>),
+    //(Vec<expected>, found?),
+    UnexpectedTokenMulti(Vec<TokenKind>, Option<Token>),
     Eof,
 }
 
@@ -100,7 +102,16 @@ impl Parser {
     }
 
     pub fn parse_quantifier(&mut self) -> Result<N<Quantifier>> {
-        todo!()
+        self.parse(|parser| {
+            let d = parser.expect_one_of(&[TokenKind::Question, TokenKind::Asterisk, TokenKind::Plus])?;
+            let quantifier = match d.kind {
+                TokenKind::Question => Quantifier::Maybe,
+                TokenKind::Asterisk => Quantifier::Multi,
+                TokenKind::Plus => Quantifier::AtLeastOne,
+                _ => unreachable!()
+            };
+            Ok(quantifier)
+        })
     }
 
     pub fn parse_ident(&mut self) -> Result<N<Ident>> {
@@ -114,12 +125,28 @@ impl Parser {
 
 impl Parser {
     pub fn expect(&mut self, expected: TokenKind) -> Result<Token> {
-        let d = self.advance().unwrap();
+        let d = match self.advance() {
+            Some(d)   => d,
+            None => return self.make_err(ParseErrorKind::UnexpectedToken(expected, None))
+        };
         if d.kind == expected {
             Ok(d)
         } else {
-            let kind = ParseErrorKind::UnexpectedToken(expected, d);
+            let kind = ParseErrorKind::UnexpectedToken(expected, Some(d));
             self.make_err(kind)
+        }
+    }
+
+    pub fn expect_one_of(&mut self, expected: &[TokenKind]) -> Result<Token> {
+        let d = match self.advance() {
+            Some(d)   => d,
+            None => return self.make_err(ParseErrorKind::UnexpectedTokenMulti(expected.to_vec(), None))
+        };
+
+        if expected.iter().find(|e| *e == &d.kind).is_some()  {
+            Ok(d)
+        } else {
+            self.make_err(ParseErrorKind::UnexpectedTokenMulti(expected.to_vec(), Some(d)))
         }
     }
 

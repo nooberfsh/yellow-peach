@@ -39,7 +39,7 @@ pub enum RuleKind {
 #[derive(Debug, Clone)]
 pub struct NamedRuleBody {
     pub name: N<Ident>,
-    pub body: N<RuleBody>,
+    pub body: Option<N<RuleBody>>,
 }
 
 #[derive(Debug, Clone)]

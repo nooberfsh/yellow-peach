@@ -192,6 +192,7 @@ impl Parser {
                     if parser.cmp_advance(TokenKind::NumSign) {
                         let name = parser.parse_ident()?;
                         parser.expect(TokenKind::Alt)?;
+                        let body = Some(body);
                         let node = parser.make_node(NamedRuleBody { name, body });
                         let mut alts = vec![node];
                         let rest = parser
@@ -212,7 +213,7 @@ impl Parser {
 
     pub fn parse_named_rule_body(&mut self) -> Result<N<NamedRuleBody>> {
         self.parse(|parser| {
-            let body = parser.parse_rule_body()?;
+            let body = parser.parse_rule_body().ok();
             parser.expect(TokenKind::NumSign)?;
             let name = parser.parse_ident()?;
             Ok(NamedRuleBody { name, body })

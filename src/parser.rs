@@ -68,6 +68,7 @@ impl Parser {
 
 impl Parser {
     pub fn parse<T>(&mut self, f: impl Fn(&mut Parser) -> Result<T>) -> Result<N<T>> {
+        let cursor = self.cursor;
         self.call_stack.push(self.cursor);
 
         if self.eof() {
@@ -76,13 +77,34 @@ impl Parser {
             return e;
         }
 
-        match f(self) {
+        let ret = match f(self) {
             Ok(d) => Ok(self.make_node(d)),
             Err(e) => {
-                self.pop_stack();
+                self.cursor = cursor;
                 Err(e)
             },
+        };
+        self.pop_stack();
+        ret
+    }
+
+    pub fn parse_opt<T>(&mut self, f: impl Fn(&mut Parser) -> Result<T>) -> Option<N<T>> {
+        if self.eof() {
+            return None
         }
+
+        let cursor = self.cursor;
+        self.call_stack.push(cursor);
+
+        let ret = match f(self) {
+            Ok(d) => Some(self.make_node(d)),
+            Err(_) => {
+                self.cursor = cursor;
+                None
+            }
+        };
+        self.pop_stack();
+        ret
     }
 
     pub fn parse_grammar(&mut self) -> Result<N<Grammar>> {

@@ -126,14 +126,16 @@ impl Parser {
         ret
     }
 
-    // one or more
-    fn parse_some<T>(
+    // zero or more
+    fn parse_many<T>(
         &mut self,
         f: impl Fn(&mut Parser) -> Result<T>,
         sep: Option<TokenKind>,
     ) -> Result<Vec<T>> {
-        let d = f(self)?;
-        let mut ret = vec![d];
+        let mut ret = match f(self) {
+            Ok(d) => vec![d],
+            Err(_) => return Ok(vec![]),
+        };
 
         if let Some(d) = sep {
             while self.cmp_advance(d) {
@@ -153,6 +155,19 @@ impl Parser {
             }
         }
 
+        Ok(ret)
+    }
+
+    // one or more
+    fn parse_some<T>(
+        &mut self,
+        f: impl Fn(&mut Parser) -> Result<T>,
+        sep: Option<TokenKind>,
+    ) -> Result<Vec<T>> {
+        let d = f(self)?;
+        let mut ret = vec![d];
+        let rest = self.parse_many(f, sep)?;
+        ret.extend(rest);
         Ok(ret)
     }
 

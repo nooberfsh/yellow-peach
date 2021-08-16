@@ -114,7 +114,10 @@ impl Parser {
     }
 
     pub fn parse_grammar(&mut self) -> Result<N<Grammar>> {
-        todo!()
+        self.parse(|parser| {
+            let rules = parser.parse_some(|p| p.parse_rule(), None)?;
+            Ok(Grammar {rules})
+        })
     }
 
     pub fn parse_rule(&mut self) -> Result<N<Rule>> {

@@ -4,7 +4,7 @@ use std::fmt;
 use crate::token::{Token, TokenKind};
 use crate::span::Span;
 use crate::lexer::{Lexer, LexError, Chars};
-use crate::ast::{Grammar, Rule, RuleBody, RuleElement, Quantifier, N, IdGen, Ident};
+use crate::ast::{Grammar, Rule, RuleBody, RuleElement, Quantifier, N, IdGen, Ident, RuleKind, NamedRuleBody};
 
 #[derive(Debug)]
 pub struct ParseError {
@@ -118,7 +118,47 @@ impl Parser {
     }
 
     pub fn parse_rule(&mut self) -> Result<N<Rule>> {
-        todo!()
+        self.parse(|parser| {
+            let name = parser.parse_ident()?;
+            parser.expect(TokenKind::Colon)?;
+
+            let token = parser.expect_one_of(&[TokenKind::Semicolon, TokenKind::Ident])?;
+            let kind = match token.kind {
+                TokenKind::Semicolon => RuleKind::Empty,
+                TokenKind::Ident => {
+                    parser.back();
+                    let body = parser.parse_rule_body()?;
+                    if parser.cmp_advance(TokenKind::NumSign) {
+                        let name = parser.parse_ident()?;
+                        parser.expect(TokenKind::Alt)?;
+                        let node = parser.make_node(NamedRuleBody{name, body});
+                        let mut alts = vec![node];
+                        let rest = parser.parse_some(|p| p.parse_named_rule_body(), Some(TokenKind::Alt))?;
+                        parser.expect(TokenKind::Semicolon)?;
+                        alts.extend(rest);
+                        RuleKind::Enum(alts)
+                    } else {
+                        parser.expect(TokenKind::Semicolon)?;
+                        RuleKind::Normal(body)
+                    }
+                }
+                _ => unreachable!()
+            };
+            Ok(Rule {
+                name, kind
+            })
+        })
+    }
+
+    pub fn parse_named_rule_body(&mut self) -> Result<N<NamedRuleBody>> {
+        self.parse(|parser| {
+            let body = parser.parse_rule_body()?;
+            parser.expect(TokenKind::NumSign)?;
+            let name = parser.parse_ident()?;
+            Ok(NamedRuleBody {
+                name, body
+            })
+        })
     }
 
     pub fn parse_rule_body(&mut self) -> Result<N<RuleBody>> {
@@ -213,6 +253,10 @@ impl Parser {
         } else {
             Some(self.tokens[self.cursor])
         }
+    }
+
+    fn back(&mut self) {
+        self.cursor -= 1;
     }
 
     fn advance_if(&mut self, p: impl Fn(TokenKind) -> bool) -> bool {

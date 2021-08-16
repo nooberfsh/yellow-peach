@@ -13,5 +13,7 @@ pub enum TokenKind {
     Asterisk,
     Colon,
     Semicolon,
+    NumSign,
+    Alt,
     Ident,
 }

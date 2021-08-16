@@ -83,6 +83,8 @@ impl Lexer {
             '*' => TokenKind::Asterisk,
             ':' => TokenKind::Colon,
             ';' => TokenKind::Semicolon,
+            '#' => TokenKind::NumSign,
+            '|' => TokenKind::Alt,
             c if is_letter(c) => {
                 self.advance_while(is_digit_letter);
                 TokenKind::Ident

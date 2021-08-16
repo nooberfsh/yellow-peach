@@ -43,9 +43,15 @@ pub struct Rule {
 
 #[derive(Debug, Clone)]
 pub enum RuleKind {
-    Enum(Vec<(N<RuleBody>, N<Ident>)>),
+    Enum(Vec<N<NamedRuleBody>>),
     Normal(N<RuleBody>),
     Empty,
+}
+
+#[derive(Debug, Clone)]
+pub struct NamedRuleBody {
+    pub name: N<Ident>,
+    pub body: N<RuleBody>,
 }
 
 #[derive(Debug, Clone)]

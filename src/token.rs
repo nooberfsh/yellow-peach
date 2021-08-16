@@ -16,4 +16,14 @@ pub enum TokenKind {
     NumSign,
     Alt,
     Ident,
+    Whitespace(Whitespace),
+}
+
+// https://www.unf.edu/~cwinton/html/cop3601/s10/class.notes/C4-PurgeBlnkLns.pdf
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum Whitespace {
+    Space,
+    Newline,
+    CarriageReturn,
+    HorizontalTab,
 }

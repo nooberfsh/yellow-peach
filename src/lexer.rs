@@ -85,6 +85,10 @@ impl Lexer {
             ';' => TokenKind::Semicolon,
             '#' => TokenKind::NumSign,
             '|' => TokenKind::Alt,
+            ' ' => TokenKind::Whitespace(Whitespace::Space),
+            '\n' => TokenKind::Whitespace(Whitespace::Newline),
+            '\r' => TokenKind::Whitespace(Whitespace::CarriageReturn),
+            '\t' => TokenKind::Whitespace(Whitespace::HorizontalTab),
             c if is_letter(c) => {
                 self.advance_while(is_digit_letter);
                 TokenKind::Ident

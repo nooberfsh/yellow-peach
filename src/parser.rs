@@ -64,8 +64,8 @@ impl IdGen {
 pub struct Parser {
     chars: Chars,
     tokens: Vec<Token>,
-    // state
     id_gen: IdGen,
+    // state
     call_stack: Vec<usize>,
     cursor: usize,
 }
@@ -79,6 +79,18 @@ fn remove_junk(tokens: &[Token]) -> Vec<Token> {
         }
     }
     ret
+}
+
+macro_rules! tri {
+    ($p:expr, $c:expr, $e:expr) => {
+        match $e {
+            Ok(d) => d,
+            Err(e) => {
+                $p.cursor = $c;
+                return Err(e);
+            }
+        }
+    };
 }
 
 impl Parser {
@@ -132,9 +144,13 @@ impl Parser {
         f: impl Fn(&mut Parser) -> Result<T>,
         sep: Option<TokenKind>,
     ) -> Result<Vec<T>> {
+        let cursor = self.cursor;
         let mut ret = match f(self) {
             Ok(d) => vec![d],
-            Err(_) => return Ok(vec![]),
+            Err(_) => {
+                self.cursor = cursor;
+                return Ok(vec![]);
+            }
         };
 
         if let Some(d) = sep {
@@ -144,6 +160,7 @@ impl Parser {
                     Err(e) => {
                         self.back();
                         let sep = self.peek().unwrap();
+                        self.cursor = cursor;
                         return self
                             .make_err(ParseErrorKind::DuplicatedSepOrParseError(sep, Box::new(e)));
                     }
@@ -164,9 +181,10 @@ impl Parser {
         f: impl Fn(&mut Parser) -> Result<T>,
         sep: Option<TokenKind>,
     ) -> Result<Vec<T>> {
-        let d = f(self)?;
+        let cursor = self.cursor;
+        let d = tri!(self, cursor, f(self));
         let mut ret = vec![d];
-        let rest = self.parse_many(f, sep)?;
+        let rest = tri!(self, cursor, self.parse_many(f, sep));
         ret.extend(rest);
         Ok(ret)
     }
@@ -212,7 +230,6 @@ impl Parser {
                     let body = parser.parse_rule_body()?;
                     if parser.cmp_advance(TokenKind::NumSign) {
                         let name = parser.parse_ident()?;
-                        parser.expect(TokenKind::Alt)?;
                         parse_alts(parser, name, Some(body))?
                     } else {
                         parser.expect(TokenKind::Semicolon)?;

@@ -1,8 +1,10 @@
 use std::error::Error;
 use std::fmt;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
 
 use crate::ast::{
-    Grammar, IdGen, Ident, NamedRuleBody, Quantifier, Rule, RuleBody, RuleElement, RuleKind, N,
+    Grammar, Ident, NamedRuleBody, NodeId, Quantifier, Rule, RuleBody, RuleElement, RuleKind, N,
 };
 use crate::lexer::{Chars, LexError, Lexer};
 use crate::span::Span;
@@ -39,6 +41,24 @@ pub enum ParseErrorKind {
 }
 
 pub type Result<T> = std::result::Result<T, ParseError>;
+
+#[derive(Clone, Debug)]
+pub struct IdGen {
+    id: Arc<AtomicUsize>,
+}
+
+impl IdGen {
+    pub fn new() -> Self {
+        IdGen {
+            id: Arc::new(AtomicUsize::new(0)),
+        }
+    }
+
+    pub fn next(&self) -> NodeId {
+        let id = self.id.fetch_add(1, Ordering::Relaxed);
+        NodeId(id)
+    }
+}
 
 #[derive(Clone, Debug)]
 pub struct Parser {

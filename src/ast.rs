@@ -1,33 +1,21 @@
+use std::fmt;
+
 use crate::span::Span;
-use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::Arc;
 
 #[derive(Debug, Clone, Copy)]
-pub struct NodeId(usize);
+pub struct NodeId(pub(crate) usize);
 
-#[derive(Clone, Debug)]
-pub struct IdGen {
-    id: Arc<AtomicUsize>,
-}
-
-impl IdGen {
-    pub fn new() -> Self {
-        IdGen {
-            id: Arc::new(AtomicUsize::new(0)),
-        }
-    }
-
-    pub fn next(&self) -> NodeId {
-        let id = self.id.fetch_add(1, Ordering::Relaxed);
-        NodeId(id)
-    }
-}
-
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct N<T> {
     pub span: Span,
     pub id: NodeId,
     pub t: T,
+}
+
+impl<T: fmt::Debug> fmt::Debug for N<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.t.fmt(f)
+    }
 }
 
 #[derive(Debug, Clone)]

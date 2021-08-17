@@ -184,6 +184,12 @@ impl Parser {
         let cursor = self.cursor;
         let d = tri!(self, cursor, f(self));
         let mut ret = vec![d];
+
+        if let Some(sep) = sep {
+            if !self.cmp_advance(sep) {
+                return Ok(ret)
+            }
+        }
         let rest = tri!(self, cursor, self.parse_many(f, sep));
         ret.extend(rest);
         Ok(ret)

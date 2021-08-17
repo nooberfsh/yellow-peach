@@ -28,6 +28,7 @@ impl Error for LexError {
 enum LexErrorKind {
     NameStartWithDigit(char),
     UnknownChar(char),
+    LitStringNotClosed,
 }
 
 pub type Result<T> = std::result::Result<T, LexError>;
@@ -90,6 +91,13 @@ impl Lexer {
             '\n' => TokenKind::Whitespace(Whitespace::Newline),
             '\r' => TokenKind::Whitespace(Whitespace::CarriageReturn),
             '\t' => TokenKind::Whitespace(Whitespace::HorizontalTab),
+            '"' => {
+                self.advance_while(|c| c != '"');
+                if !self.cmp_advance('"') {
+                    return Err(self.make_error(LexErrorKind::LitStringNotClosed))
+                }
+                TokenKind::LitString
+            }
             c if is_letter(c) => {
                 self.advance_while(is_digit_letter);
                 TokenKind::Ident
@@ -124,6 +132,20 @@ impl Lexer {
             self.cursor += 1;
             Some(c)
         }
+    }
+
+    fn advance_if(&mut self, p: impl Fn(char) -> bool) -> bool {
+        if let Some(c) = self.peek() {
+            if p(c) {
+                self.cursor += 1;
+                return true;
+            }
+        }
+        false
+    }
+
+    fn cmp_advance(&mut self, c: char) -> bool {
+        self.advance_if(|x| x == c)
     }
 
     fn peek(&self) -> Option<char> {

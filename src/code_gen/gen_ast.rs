@@ -1,7 +1,6 @@
 use iterable::Iterable;
 
 use crate::ast;
-use crate::ast::{Ident, RuleElement};
 
 use super::*;
 
@@ -47,7 +46,7 @@ fn gen_enum(body: &ast::NamedRuleBody) -> String {
     }
 }
 
-fn quantifier_type(ele: &RuleElement) -> String {
+fn quantifier_type(ele: &ast::RuleElement) -> String {
     use ast::Quantifier::*;
     let ty = node_type_name(&ele.nt);
     if let Some(d) = &ele.quantifier {

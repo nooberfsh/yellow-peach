@@ -18,6 +18,7 @@ pub enum TokenKind {
     Assign,
     Ident,
     Whitespace(Whitespace),
+    LitString,
 }
 
 // https://www.unf.edu/~cwinton/html/cop3601/s10/class.notes/C4-PurgeBlnkLns.pdf

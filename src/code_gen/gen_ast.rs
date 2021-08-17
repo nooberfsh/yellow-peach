@@ -49,7 +49,7 @@ fn gen_enum(body: &ast::NamedRuleBody) -> String {
 
 fn quantifier_type(ele: &RuleElement) -> String {
     use ast::Quantifier::*;
-    let ty = type_name(&ele.nt);
+    let ty = node_type_name(&ele.nt);
     if let Some(d) = &ele.quantifier {
         match &d.t {
             Multi | AtLeastOne => format!("Vec<{}>", ty),

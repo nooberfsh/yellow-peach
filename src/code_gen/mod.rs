@@ -3,6 +3,7 @@ use iterable::Iterable;
 use crate::ast::Ident;
 
 pub mod gen_ast;
+pub mod gen_meta;
 
 fn type_name(input: &Ident) -> String {
     let s = input.to_str();

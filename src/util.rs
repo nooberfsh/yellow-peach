@@ -11,8 +11,7 @@ pub fn is_std_primary(input: &str) -> bool {
 // TODO: add all keywords
 pub fn is_keyword(input: &str) -> bool {
     match input {
-        "as" | "break" | "where"
-        => true,
+        "as" | "break" | "where" => true,
         _ => false,
     }
 }
@@ -42,7 +41,6 @@ pub fn camel_case(s: &str) -> String {
     }
     buf.into_iter().collect()
 }
-
 
 #[cfg(test)]
 mod tests {

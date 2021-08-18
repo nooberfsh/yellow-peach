@@ -1,9 +1,9 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::ast::{Ident, N, Grammar};
 use crate::ast;
-use crate::visit::{Visitor, walk_rule};
+use crate::ast::{Grammar, Ident, N};
 use crate::util::is_std_primary;
+use crate::visit::{walk_rule, Visitor};
 use iterable::Iterable;
 
 #[derive(Debug, Clone)]
@@ -21,11 +21,13 @@ pub enum Error<'ast> {
 
 impl<'ast> Mir<'ast> {
     pub fn is_boxed(&self, id: &Ident) -> bool {
-        (&self.boxed_rules).find(|r| r.to_str() == id.to_str()).is_some()
+        (&self.boxed_rules)
+            .find(|r| r.to_str() == id.to_str())
+            .is_some()
     }
 }
 
-pub fn lower(grammar: & N<ast::Grammar>) -> Result<Mir<'_>, Error<'_>> {
+pub fn lower(grammar: &N<ast::Grammar>) -> Result<Mir<'_>, Error<'_>> {
     // basic check
     let mut bc = BasicCheck::new();
     bc.visit_grammar(grammar);
@@ -38,7 +40,6 @@ pub fn lower(grammar: & N<ast::Grammar>) -> Result<Mir<'_>, Error<'_>> {
     Ok(ret)
 }
 
-
 // basic check
 #[derive(Debug, Clone)]
 struct BasicCheck<'ast> {
@@ -49,7 +50,7 @@ struct BasicCheck<'ast> {
 static ATTR_BOX: &str = "box";
 static ALLOWED_ATTRS: &[&str] = &[ATTR_BOX];
 
-static RESERVED: &[&str]=  &["string"];
+static RESERVED: &[&str] = &["string"];
 
 impl<'ast> BasicCheck<'ast> {
     fn new() -> Self {
@@ -97,7 +98,7 @@ impl<'ast> MirBuilder<'ast> {
     fn new(grammar: &'ast N<Grammar>) -> Self {
         let mut rule_map = HashMap::new();
         for r in &grammar.rules {
-            let name = r.name.to_str().to_string()        ;
+            let name = r.name.to_str().to_string();
             rule_map.insert(name, r);
         }
         MirBuilder {
@@ -123,7 +124,7 @@ impl<'ast> Visitor<'ast> for MirBuilder<'ast> {
         for attr in &n.attrs {
             if attr.to_str() == ATTR_BOX {
                 self.boxed_rules.push(&n.name);
-                break
+                break;
             }
         }
         walk_rule(self, n)
@@ -139,10 +140,10 @@ impl<'ast> Visitor<'ast> for MirBuilder<'ast> {
     fn visit_ident(&mut self, n: &'ast N<Ident>) {
         let name = n.to_str();
         if is_std_primary(name) {
-            return
+            return;
         }
         if RESERVED.contains(&name) {
-            return
+            return;
         }
         if !self.rule_map.contains_key(name) {
             self.leaf_nodes.insert(n);

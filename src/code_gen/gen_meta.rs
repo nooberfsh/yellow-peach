@@ -46,6 +46,6 @@ impl<T: Hash> Hash for N<T> {
 }
 "#;
 
-pub (crate) fn gen_meta() -> String {
+pub(crate) fn gen_meta() -> String {
     trim(META)
 }

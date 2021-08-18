@@ -34,7 +34,6 @@ pub trait Visitor<'ast>: Sized {
     }
 }
 
-
 macro_rules! walk_list {
     ($visitor: expr, $method: ident, $list: expr) => {
         for elem in $list {
@@ -51,8 +50,8 @@ pub fn walk_rule<'a, V: Visitor<'a>>(v: &mut V, n: &'a N<Rule>) {
     walk_list!(v, visit_attr, &n.attrs);
     v.visit_ident(&n.name);
     match &n.kind {
-        RuleKind::Enum(b) =>  walk_list!(v, visit_named_rule_body, b),
-        RuleKind::Normal(b) =>  v.visit_rule_body(b),
+        RuleKind::Enum(b) => walk_list!(v, visit_named_rule_body, b),
+        RuleKind::Normal(b) => v.visit_rule_body(b),
     }
 }
 
@@ -77,11 +76,8 @@ pub fn walk_rule_element<'a, V: Visitor<'a>>(v: &mut V, n: &'a N<RuleElement>) {
     }
 }
 
-pub fn walk_quantifier<'a, V: Visitor<'a>>(_v: &mut V, _n: &'a N<Quantifier>) {
-}
+pub fn walk_quantifier<'a, V: Visitor<'a>>(_v: &mut V, _n: &'a N<Quantifier>) {}
 
-pub fn walk_ident<'a, V: Visitor<'a>>(_v: &mut V, _n: &'a N<Ident>) {
-}
+pub fn walk_ident<'a, V: Visitor<'a>>(_v: &mut V, _n: &'a N<Ident>) {}
 
-pub fn walk_attr<'a, V: Visitor<'a>>(_v: &mut V, _n: &'a N<Attr>) {
-}
+pub fn walk_attr<'a, V: Visitor<'a>>(_v: &mut V, _n: &'a N<Attr>) {}

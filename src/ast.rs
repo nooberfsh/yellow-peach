@@ -1,5 +1,5 @@
-use std::fmt;
 use std::cmp::Eq;
+use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::ops::Deref;
 

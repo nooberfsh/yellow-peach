@@ -1,6 +1,6 @@
 use crate::ast::Ident;
-use crate::util::{is_std_primary, camel_case};
 use crate::mir::Mir;
+use crate::util::{camel_case, is_std_primary};
 
 pub mod gen_ast;
 pub mod gen_meta;
@@ -11,6 +11,6 @@ pub struct CodeGen<'ast> {
 
 impl<'ast> CodeGen<'ast> {
     pub fn new(mir: Mir<'ast>) -> Self {
-        CodeGen{mir}
+        CodeGen { mir }
     }
 }

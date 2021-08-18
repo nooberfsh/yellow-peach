@@ -3,7 +3,10 @@ use std::fmt;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
-use crate::ast::{Grammar, Ident, NamedRuleBody, NodeId, Quantifier, Rule, RuleBody, RuleElement, RuleKind, N, Attr};
+use crate::ast::{
+    Attr, Grammar, Ident, NamedRuleBody, NodeId, Quantifier, Rule, RuleBody, RuleElement, RuleKind,
+    N,
+};
 use crate::lexer::{Chars, LexError, Lexer};
 use crate::span::Span;
 use crate::token::{Token, TokenKind};

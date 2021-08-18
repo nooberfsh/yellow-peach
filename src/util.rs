@@ -42,3 +42,17 @@ pub fn camel_case(s: &str) -> String {
     }
     buf.into_iter().collect()
 }
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_camel_case() {
+        assert_eq!("Ab", camel_case("ab"));
+        assert_eq!("Ab", camel_case("aB"));
+        assert_eq!("AbAb", camel_case("aB_ab"));
+        assert_eq!("AbAb", camel_case("aB_aB"));
+    }
+}

@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::ast::{Ident, N, Grammar};
 use crate::ast;
@@ -11,7 +11,7 @@ pub struct Mir<'ast> {
     pub boxed_rules: Vec<&'ast N<Ident>>,
     pub rule_map: HashMap<String, &'ast N<ast::Rule>>,
     pub rules: &'ast Vec<N<ast::Rule>>,
-    pub leaf_nodes: Vec<&'ast N<Ident>>,
+    pub leaf_nodes: HashSet<&'ast N<Ident>>,
 }
 
 #[derive(Debug, Clone)]
@@ -90,7 +90,7 @@ struct MirBuilder<'ast> {
     boxed_rules: Vec<&'ast N<Ident>>,
     rule_map: HashMap<String, &'ast N<ast::Rule>>,
     rules: &'ast Vec<N<ast::Rule>>,
-    leaf_nodes: Vec<&'ast N<ast::Ident>>,
+    leaf_nodes: HashSet<&'ast N<ast::Ident>>,
 }
 
 impl<'ast> MirBuilder<'ast> {
@@ -103,7 +103,7 @@ impl<'ast> MirBuilder<'ast> {
         MirBuilder {
             rule_map,
             rules: &grammar.rules,
-            leaf_nodes: vec![],
+            leaf_nodes: HashSet::new(),
             boxed_rules: vec![],
         }
     }
@@ -145,7 +145,7 @@ impl<'ast> Visitor<'ast> for MirBuilder<'ast> {
             return
         }
         if !self.rule_map.contains_key(name) {
-            self.leaf_nodes.push(n)
+            self.leaf_nodes.insert(n);
         }
     }
 }

@@ -8,6 +8,15 @@ pub fn is_std_primary(input: &str) -> bool {
     }
 }
 
+// TODO: add all keywords
+pub fn is_keyword(input: &str) -> bool {
+    match input {
+        "as" | "break" | "where"
+        => true,
+        _ => false,
+    }
+}
+
 pub fn trim(s: &str) -> String {
     s.trim().to_string()
 }

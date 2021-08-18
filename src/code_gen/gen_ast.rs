@@ -1,7 +1,7 @@
 use iterable::Iterable;
 
 use crate::ast;
-use crate::util::indent;
+use crate::util::{indent, is_keyword};
 
 use super::*;
 
@@ -31,11 +31,16 @@ impl<'ast> CodeGen<'ast> {
     }
 
     fn gen_field(&self, ele: &ast::RuleElement) -> String {
+        let ty = self.quantifier_type(ele);
         let name = match &ele.name {
             Some(d) => d.to_str(),
             None => ele.nt.to_str(),
         };
-        let ty = self.quantifier_type(ele);
+        let name = if is_keyword(name) {
+            format!("r#{}", name)
+        } else {
+            name.to_string()
+        };
         format!("pub {}: {}", name, ty)
     }
 

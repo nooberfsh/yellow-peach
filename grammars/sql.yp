@@ -1,3 +1,4 @@
+@box
 query
     : query_spec order_by?
     ;
@@ -14,10 +15,124 @@ from
     : relation
     ;
 
+@box
 relation
     : qualified_name relation_alias?                # qualified_name
     | query relation_alias?                         # sub_query
     | relation join_type relation join_criteria     # join
     ;
 
+relation_alias
+    : as? ident
+    ;
 
+where
+    : expr
+    ;
+
+group_by
+    : set_quantifier? grouping_element+
+    ;
+
+order_by
+    : sort_item+
+    ;
+
+select_item
+    : expr ident?   # expr
+    | expr as ident # expr_as
+    | expr # qualified_asterisk
+    | # asterisk
+    ;
+
+grouping_element
+    : expr
+    ;
+
+sort_item
+    : expr ordering?
+    ;
+
+ordering
+    : # asc
+    | # desc
+    ;
+
+join_type
+    : # cross
+    | outer? # inner
+    | outer? # left
+    | outer? # right
+    | outer? # full
+    ;
+
+join_criteria
+    : expr # on
+    | ident+ # using
+    ;
+
+ident
+    : string
+    ;
+
+@box
+expr
+    : expr bin_op expr # binary
+    | unary_op expr # unary
+    | ident fun_arguments filter? # fun_call
+    | ident # ident
+    | expr ident # deference
+    | lit # lit
+    ;
+
+fun_arguments
+    : set_quantifier? expr*
+    ;
+
+filter
+    : expr
+    ;
+
+set_quantifier
+    : # distinct
+    | # all
+    ;
+
+qualified_name
+    : ident+
+    ;
+
+lit
+    : # null
+    | #decimal
+    | #double
+    | #integer
+    | bool #bool
+    | # string
+    ;
+
+bin_op
+    : # or
+    | # and
+    | # distinct
+    | # like
+    | # in
+    | # eq
+    | # neq
+    | # lt
+    | # lte
+    | # gt
+    | # gte
+    | # concat
+    | # plus
+    | # minus
+    | # asterisk
+    | # slash
+    | # percent
+    ;
+
+unary_op
+    : # plus
+    | # minus
+    | not? #null
+    ;

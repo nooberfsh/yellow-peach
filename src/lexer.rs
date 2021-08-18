@@ -94,7 +94,7 @@ impl Lexer {
             '"' => {
                 self.advance_while(|c| c != '"');
                 if !self.cmp_advance('"') {
-                    return Err(self.make_error(LexErrorKind::LitStringNotClosed))
+                    return Err(self.make_error(LexErrorKind::LitStringNotClosed));
                 }
                 TokenKind::LitString
             }

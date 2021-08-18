@@ -187,7 +187,7 @@ impl Parser {
 
         if let Some(sep) = sep {
             if !self.cmp_advance(sep) {
-                return Ok(ret)
+                return Ok(ret);
             }
         }
         let rest = tri!(self, cursor, self.parse_many(f, sep));
@@ -202,7 +202,7 @@ impl Parser {
                 let rule = parser.parse_rule()?;
                 rules.push(rule);
             }
-            Ok(Grammar{rules})
+            Ok(Grammar { rules })
         })
     }
 
@@ -214,13 +214,18 @@ impl Parser {
         ) -> Result<RuleKind> {
             let head = parser.make_node(NamedRuleBody { name, body });
             let mut alts = vec![head];
-            if parser.cmp_advance(TokenKind::Alt) {
-                let rest =
-                    parser.parse_some(|p| p.parse_named_rule_body(), Some(TokenKind::Alt))?;
-                parser.expect(TokenKind::Semicolon)?;
-                alts.extend(rest);
-            } else {
-                parser.expect(TokenKind::Semicolon)?;
+            let token = parser.expect_one_of(&[TokenKind::Alt, TokenKind::Semicolon])?;
+            match token.kind {
+                TokenKind::Alt => {
+                    let rest =
+                        parser.parse_some(|p| p.parse_named_rule_body(), Some(TokenKind::Alt))?;
+                    parser.expect(TokenKind::Semicolon)?;
+                    alts.extend(rest);
+                }
+                TokenKind::Semicolon => {
+                    // do nothing
+                }
+                _ => unreachable!(),
             }
             Ok(RuleKind::Enum(alts))
         }

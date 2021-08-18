@@ -17,6 +17,7 @@ pub enum TokenKind {
     Alt,
     Assign,
     Ident,
+    Attr,
     Whitespace(Whitespace),
     LitString,
 }

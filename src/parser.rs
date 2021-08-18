@@ -3,9 +3,7 @@ use std::fmt;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
-use crate::ast::{
-    Grammar, Ident, NamedRuleBody, NodeId, Quantifier, Rule, RuleBody, RuleElement, RuleKind, N,
-};
+use crate::ast::{Grammar, Ident, NamedRuleBody, NodeId, Quantifier, Rule, RuleBody, RuleElement, RuleKind, N, Attr};
 use crate::lexer::{Chars, LexError, Lexer};
 use crate::span::Span;
 use crate::token::{Token, TokenKind};
@@ -231,6 +229,7 @@ impl Parser {
         }
 
         self.parse(|parser| {
+            let attrs = parser.parse_many(|p| p.parse_attr(), None)?;
             let name = parser.parse_ident()?;
             parser.expect(TokenKind::Colon)?;
 
@@ -253,7 +252,7 @@ impl Parser {
                 }
                 _ => unreachable!(),
             };
-            Ok(Rule { name, kind })
+            Ok(Rule { attrs, name, kind })
         })
     }
 
@@ -313,6 +312,15 @@ impl Parser {
             let d = parser.expect(TokenKind::Ident)?;
             let name = parser.get_string(d.span);
             Ok(Ident { name })
+        })
+    }
+
+    pub fn parse_attr(&mut self) -> Result<N<Attr>> {
+        self.parse(|parser| {
+            let d = parser.expect(TokenKind::Attr)?;
+            let name = parser.get_string(d.span);
+            let name = name.trim_matches('@').to_string();
+            Ok(Attr { name })
         })
     }
 }

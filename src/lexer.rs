@@ -91,6 +91,10 @@ impl Lexer {
             '\n' => TokenKind::Whitespace(Whitespace::Newline),
             '\r' => TokenKind::Whitespace(Whitespace::CarriageReturn),
             '\t' => TokenKind::Whitespace(Whitespace::HorizontalTab),
+            '@' => {
+                self.advance_while(is_digit_letter);
+                TokenKind::Attr
+            }
             '"' => {
                 self.advance_while(|c| c != '"');
                 if !self.cmp_advance('"') {

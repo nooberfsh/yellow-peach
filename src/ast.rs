@@ -33,6 +33,7 @@ pub struct Grammar {
 
 #[derive(Debug, Clone)]
 pub struct Rule {
+    pub attrs: Vec<N<Attr>>,
     pub name: N<Ident>,
     pub kind: RuleKind,
 }
@@ -73,6 +74,11 @@ pub enum Quantifier {
 
 #[derive(Debug, Clone)]
 pub struct Ident {
+    pub name: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct Attr {
     pub name: String,
 }
 

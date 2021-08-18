@@ -1,10 +1,11 @@
 use std::collections::{HashMap, HashSet};
 
+use iterable::Iterable;
+
 use crate::ast;
 use crate::ast::{Grammar, Ident, N};
 use crate::util::is_std_primary;
 use crate::visit::{walk_rule, Visitor};
-use iterable::Iterable;
 
 #[derive(Debug, Clone)]
 pub struct Mir<'ast> {
@@ -12,6 +13,8 @@ pub struct Mir<'ast> {
     pub rule_map: HashMap<String, &'ast N<ast::Rule>>,
     pub rules: &'ast Vec<N<ast::Rule>>,
     pub leaf_nodes: HashSet<&'ast N<Ident>>,
+    pub reserved_nodes: HashSet<&'ast N<ast::Ident>>,
+    pub std_primary_nodes: HashSet<&'ast N<ast::Ident>>,
 }
 
 #[derive(Debug, Clone)]
@@ -92,6 +95,8 @@ struct MirBuilder<'ast> {
     rule_map: HashMap<String, &'ast N<ast::Rule>>,
     rules: &'ast Vec<N<ast::Rule>>,
     leaf_nodes: HashSet<&'ast N<ast::Ident>>,
+    reserved_nodes: HashSet<&'ast N<ast::Ident>>,
+    std_primary_nodes: HashSet<&'ast N<ast::Ident>>,
 }
 
 impl<'ast> MirBuilder<'ast> {
@@ -105,6 +110,8 @@ impl<'ast> MirBuilder<'ast> {
             rule_map,
             rules: &grammar.rules,
             leaf_nodes: HashSet::new(),
+            reserved_nodes: HashSet::new(),
+            std_primary_nodes: HashSet::new(),
             boxed_rules: vec![],
         }
     }
@@ -115,6 +122,8 @@ impl<'ast> MirBuilder<'ast> {
             rule_map: self.rule_map,
             rules: self.rules,
             leaf_nodes: self.leaf_nodes,
+            reserved_nodes: self.reserved_nodes,
+            std_primary_nodes: self.std_primary_nodes,
         }
     }
 }
@@ -140,12 +149,10 @@ impl<'ast> Visitor<'ast> for MirBuilder<'ast> {
     fn visit_ident(&mut self, n: &'ast N<Ident>) {
         let name = n.to_str();
         if is_std_primary(name) {
-            return;
-        }
-        if RESERVED.contains(&name) {
-            return;
-        }
-        if !self.rule_map.contains_key(name) {
+            self.std_primary_nodes.insert(n);
+        } else if RESERVED.contains(&name) {
+            self.reserved_nodes.insert(n);
+        } else if !self.rule_map.contains_key(name) {
             self.leaf_nodes.insert(n);
         }
     }

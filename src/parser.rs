@@ -197,8 +197,12 @@ impl Parser {
 
     pub fn parse_grammar(&mut self) -> Result<N<Grammar>> {
         self.parse(|parser| {
-            let rules = parser.parse_some(|p| p.parse_rule(), None)?;
-            Ok(Grammar { rules })
+            let mut rules = vec![];
+            while !parser.eof() {
+                let rule = parser.parse_rule()?;
+                rules.push(rule);
+            }
+            Ok(Grammar{rules})
         })
     }
 

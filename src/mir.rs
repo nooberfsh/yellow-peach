@@ -4,6 +4,7 @@ use crate::ast::{Ident, N};
 use crate::ast;
 use crate::visit::{Visitor, walk_rule};
 use crate::util::is_std_primary;
+use iterable::Iterable;
 
 #[derive(Debug, Clone)]
 pub struct Mir<'ast> {
@@ -15,6 +16,12 @@ pub struct Mir<'ast> {
 #[derive(Debug, Clone)]
 pub enum Error<'ast> {
     BasicCheckError(Vec<&'ast N<Ident>>, Vec<&'ast N<ast::Attr>>),
+}
+
+impl<'ast> Mir<'ast> {
+    pub fn is_boxed(&self, id: &Ident) -> bool {
+        (&self.boxed_rules).find(|r| r.to_str() == id.to_str()).is_some()
+    }
 }
 
 pub fn lower(grammar: & N<ast::Grammar>) -> Result<Mir<'_>, Error<'_>> {

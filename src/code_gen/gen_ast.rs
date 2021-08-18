@@ -2,14 +2,16 @@ use iterable::Iterable;
 
 use crate::ast;
 use crate::util::{indent, is_keyword};
+use crate::code_gen::gen_meta::gen_meta;
 
 use super::*;
 
 impl<'ast> CodeGen<'ast> {
     pub fn gen_ast(&self) -> String {
+        let meta = gen_meta();
         let body = (&self.mir.rules).lazy_map(|r| self.gen_rule(r)).join("\n\n");
         let leaf_nodes = (&self.mir.leaf_nodes).lazy_map(|r| self.gen_leaf_node(r)).join("\n\n");
-        format!("{}\n\n{}", body, leaf_nodes)
+        format!("{}\n{}\n\n{}", meta, body, leaf_nodes)
     }
 
     fn gen_leaf_node(&self, node: &Ident) -> String {

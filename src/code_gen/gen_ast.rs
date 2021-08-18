@@ -55,7 +55,7 @@ impl<'ast> CodeGen<'ast> {
     }
 
     fn gen_enum(&self, body: &ast::NamedRuleBody) -> String {
-        let variant = self.type_name(&body.name);
+        let variant = self.variant_name(&body.name);
         if let Some(body) = &body.body {
             let body = (&body.body).lazy_map(|r| self.quantifier_type(r)).join(", ");
             format!("{}({})", variant, body)
@@ -94,4 +94,8 @@ impl<'ast> CodeGen<'ast> {
         }
     }
 
+    fn variant_name(&self, input: &Ident) -> String {
+        let s = input.to_str();
+        camel_case(s)
+    }
 }

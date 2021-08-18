@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::ast::{Ident, N};
+use crate::ast::{Ident, N, Grammar};
 use crate::ast;
 use crate::visit::{Visitor, walk_rule};
 use crate::util::is_std_primary;
@@ -9,7 +9,8 @@ use iterable::Iterable;
 #[derive(Debug, Clone)]
 pub struct Mir<'ast> {
     pub boxed_rules: Vec<&'ast N<Ident>>,
-    pub rules: HashMap<String, &'ast N<ast::Rule>>,
+    pub rule_map: HashMap<String, &'ast N<ast::Rule>>,
+    pub rules: &'ast Vec<N<ast::Rule>>,
     pub leaf_nodes: Vec<&'ast N<Ident>>,
 }
 
@@ -30,12 +31,7 @@ pub fn lower(grammar: & N<ast::Grammar>) -> Result<Mir<'_>, Error<'_>> {
     bc.visit_grammar(grammar);
     bc.into_error()?;
 
-    let mut rules = HashMap::new();
-    for r in &grammar.rules {
-       let name = r.name.to_str().to_string()        ;
-        rules.insert(name, r);
-    }
-    let mut builder = MirBuilder::new(rules);
+    let mut builder = MirBuilder::new(grammar);
     builder.visit_grammar(grammar);
 
     let ret = builder.build();
@@ -92,14 +88,21 @@ impl<'ast> Visitor<'ast> for BasicCheck<'ast> {
 #[derive(Debug, Clone)]
 struct MirBuilder<'ast> {
     boxed_rules: Vec<&'ast N<Ident>>,
-    rules: HashMap<String, &'ast N<ast::Rule>>,
+    rule_map: HashMap<String, &'ast N<ast::Rule>>,
+    rules: &'ast Vec<N<ast::Rule>>,
     leaf_nodes: Vec<&'ast N<ast::Ident>>,
 }
 
 impl<'ast> MirBuilder<'ast> {
-    fn new(rules: HashMap<String, &'ast N<ast::Rule>>) -> Self {
+    fn new(grammar: &'ast N<Grammar>) -> Self {
+        let mut rule_map = HashMap::new();
+        for r in &grammar.rules {
+            let name = r.name.to_str().to_string()        ;
+            rule_map.insert(name, r);
+        }
         MirBuilder {
-            rules,
+            rule_map,
+            rules: &grammar.rules,
             leaf_nodes: vec![],
             boxed_rules: vec![],
         }
@@ -108,6 +111,7 @@ impl<'ast> MirBuilder<'ast> {
     fn build(self) -> Mir<'ast> {
         Mir {
             boxed_rules: self.boxed_rules,
+            rule_map: self.rule_map,
             rules: self.rules,
             leaf_nodes: self.leaf_nodes,
         }
@@ -140,7 +144,7 @@ impl<'ast> Visitor<'ast> for MirBuilder<'ast> {
         if RESERVED.contains(&name) {
             return
         }
-        if !self.rules.contains_key(name) {
+        if !self.rule_map.contains_key(name) {
             self.leaf_nodes.push(n)
         }
     }

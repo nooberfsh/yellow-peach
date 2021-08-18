@@ -7,7 +7,7 @@ use super::*;
 
 impl<'ast> CodeGen<'ast> {
     pub fn gen_ast(&self) -> String {
-        (&self.mir.rules).lazy_map(|(_, r)| self.gen_rule(r)).join("\n\n")
+        (&self.mir.rules).lazy_map(|r| self.gen_rule(r)).join("\n\n")
     }
 
     fn gen_rule(&self, rule: &ast::Rule) -> String {

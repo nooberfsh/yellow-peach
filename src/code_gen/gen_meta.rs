@@ -1,4 +1,4 @@
-use crate::code_gen::trim;
+use crate::util::trim;
 
 const META: &str = r#"
 use std::fmt;

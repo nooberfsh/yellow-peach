@@ -50,10 +50,15 @@ impl<'ast> CodeGen<'ast> {
             Some(d) => d.to_str(),
             None => ele.nt.to_str(),
         };
-        let name = if is_keyword(name) {
-            format!("r#{}", name)
+        let name = if ele.has_many() {
+            format!("{}s", name)
         } else {
             name.to_string()
+        };
+        let name = if is_keyword(&name) {
+            format!("r#{}", name)
+        } else {
+            name
         };
         format!("pub {}: {}", name, ty)
     }

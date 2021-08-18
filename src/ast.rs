@@ -81,7 +81,18 @@ pub struct RuleElement {
     pub quantifier: Option<N<Quantifier>>,
 }
 
-#[derive(Debug, Clone)]
+impl RuleElement {
+    pub fn has_many(&self) -> bool {
+        if let Some(d) = &self.quantifier {
+            if d.t == Quantifier::Multi || d.t == Quantifier::AtLeastOne {
+                return true;
+            }
+        }
+        false
+    }
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Quantifier {
     /// ?
     Maybe,

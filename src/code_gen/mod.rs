@@ -1,6 +1,7 @@
 use iterable::Iterable;
 
 use crate::ast::Ident;
+use crate::util::is_std_primary;
 
 pub mod gen_ast;
 pub mod gen_meta;
@@ -16,14 +17,6 @@ fn type_name(input: &Ident) -> String {
 
 fn node_type_name(input: &Ident) -> String {
     format!("N<{}>", type_name(input))
-}
-
-fn is_std_primary(input: &str) -> bool {
-    match input {
-        "bool" | "u8" | "u16" | "u32" | "u64" | "u128" | "i8" | "i16" | "i32" | "i64" | "i128"
-        | "char" | "str" | "!" => true,
-        _ => false,
-    }
 }
 
 fn trim(s: &str) -> String {

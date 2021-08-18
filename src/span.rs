@@ -19,8 +19,8 @@ impl Span {
     }
 
     pub fn merge(&self, other: Span) -> Span {
-        let start = self.start;
-        let end = other.end;
+        let start = self.start.min(other.start);
+        let end = self.end.max(other.end);
         Self::new(start, end)
     }
 }
@@ -31,9 +31,28 @@ mod tests {
 
     #[test]
     fn test_merge() {
-        let (start, end) = (1, 3);
-        let a = Span { start, end };
+        let a = Span::new(1, 3);
         let res = a.merge(a);
         assert_eq!(res, a);
+
+        let b = Span::new(0, 2);
+        let res = a.merge(b);
+        assert_eq!(res, Span::new(0, 3));
+
+        let b = Span::new(0, 1);
+        let res = a.merge(b);
+        assert_eq!(res, Span::new(0, 3));
+
+        let b = Span::new(0, 4);
+        let res = a.merge(b);
+        assert_eq!(res, Span::new(0, 4));
+
+        let b = Span::new(1, 4);
+        let res = a.merge(b);
+        assert_eq!(res, Span::new(1, 4));
+
+        let b = Span::new(3, 4);
+        let res = a.merge(b);
+        assert_eq!(res, Span::new(1, 4));
     }
 }

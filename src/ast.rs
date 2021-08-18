@@ -98,3 +98,9 @@ impl Ident {
         &self.name
     }
 }
+
+impl Attr {
+    pub fn to_str(&self) -> &str {
+        &self.name
+    }
+}

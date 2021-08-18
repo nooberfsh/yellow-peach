@@ -8,6 +8,9 @@ pub mod lexer;
 pub mod parser;
 pub mod span;
 pub mod token;
+pub mod mir;
+pub mod visit;
+pub mod util;
 
 fn main() {
     println!("Hello, world!");

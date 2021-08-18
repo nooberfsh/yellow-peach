@@ -57,13 +57,17 @@ impl<'ast> BasicCheck<'ast> {
     }
 
     fn into_error(self) -> Result<(), Error<'ast>> {
-        Err(Error::BasicCheckError(self.invalid_ids, self.invalid_attrs))
+        if self.invalid_ids.is_empty() && self.invalid_attrs.is_empty() {
+            Ok(())
+        } else {
+            Err(Error::BasicCheckError(self.invalid_ids, self.invalid_attrs))
+        }
     }
 }
 
 impl<'ast> Visitor<'ast> for BasicCheck<'ast> {
     fn visit_ident(&mut self, n: &'ast N<Ident>) {
-        let s = n.to_str().chars().all(|c| c.is_lowercase());
+        let s = n.to_str().chars().all(|c| c == '_' || c.is_lowercase());
         if !s {
             self.invalid_ids.push(n)
         }
@@ -71,7 +75,7 @@ impl<'ast> Visitor<'ast> for BasicCheck<'ast> {
 
     fn visit_attr(&mut self, n: &'ast N<ast::Attr>) {
         let name = n.to_str();
-        if ALLOWED_ATTRS.contains(&name) {
+        if !ALLOWED_ATTRS.contains(&name) {
             self.invalid_attrs.push(n)
         }
     }

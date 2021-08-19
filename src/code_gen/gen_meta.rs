@@ -5,6 +5,7 @@ use std::fmt;
 use std::cmp::Eq;
 use std::hash::{Hash, Hasher};
 use std::ops::Deref;
+use std::ops::DerefMut;
 
 use crate::span::Span;
 
@@ -28,6 +29,12 @@ impl<T> Deref for N<T> {
     type Target = T;
     fn deref(&self) -> &Self::Target {
         &self.t
+    }
+}
+
+impl<T> DerefMut for N<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.t
     }
 }
 

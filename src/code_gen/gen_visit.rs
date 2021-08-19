@@ -7,20 +7,21 @@ use crate::util::{indent, trim};
 use std::collections::HashSet;
 
 impl<'ast> CodeGen<'ast> {
-    pub fn gen_visit(&self) -> String {
+    pub fn gen_visit(&self, is_mut: bool) -> String {
         let body = self
             .mir
             .rules
-            .lazy_map(|r| self.gen_visit_method(r))
+            .lazy_map(|r| self.gen_visit_method(r, is_mut))
             .join("\n\n");
-        let body_leaf = self.gen_visit_method_empty_multi(&self.mir.leaf_nodes);
-        let body_reserved = self.gen_visit_method_empty_multi(&self.mir.reserved_nodes);
-        let body_std_primary = self.gen_visit_method_empty_multi(&self.mir.std_primary_nodes);
+        let body_leaf = self.gen_visit_method_empty_multi(&self.mir.leaf_nodes, is_mut);
+        let body_reserved = self.gen_visit_method_empty_multi(&self.mir.reserved_nodes, is_mut);
+        let body_std_primary =
+            self.gen_visit_method_empty_multi(&self.mir.std_primary_nodes, is_mut);
         let visitor = format!(
             r#"
 use crate::ast::*;
 
-pub trait Visitor<'ast>: Sized {{
+pub trait {}: Sized {{
 {}
 
 {}
@@ -30,6 +31,7 @@ pub trait Visitor<'ast>: Sized {{
 {}
 }}
         "#,
+            visitor_name(is_mut),
             indent(&body),
             indent(&body_leaf),
             indent(&body_reserved),
@@ -39,41 +41,47 @@ pub trait Visitor<'ast>: Sized {{
         let walk_methods = self
             .mir
             .rules
-            .lazy_map(|r| self.gen_walk_method(r))
+            .lazy_map(|r| self.gen_walk_method(r, is_mut))
             .join("\n\n");
 
         format!("{}\n\n{}\n", trim(&visitor), trim(&walk_methods))
     }
 
-    fn gen_visit_method(&self, rule: &ast::Rule) -> String {
+    fn gen_visit_method(&self, rule: &ast::Rule, is_mut: bool) -> String {
         let visit_name = visit_name(&rule.name);
         let walk_name = walk_name(&rule.name);
 
         let ty = self.node_type_name(&rule.name);
         let ret = format!(
             r#"
-fn {}(&mut self, n: &'ast {}) {{
+fn {}(&mut self, n: {}) {{
     {}(self, n);
 }}
         "#,
-            visit_name, ty, walk_name
+            visit_name,
+            wrap_mut(is_mut, &ty),
+            walk_name
         );
         trim(&ret)
     }
 
-    fn gen_visit_method_empty_multi(&self, nodes: &HashSet<&N<Ident>>) -> String {
+    fn gen_visit_method_empty_multi(&self, nodes: &HashSet<&N<Ident>>, is_mut: bool) -> String {
         nodes
-            .lazy_map(|n| self.gen_visit_method_empty(n))
+            .lazy_map(|n| self.gen_visit_method_empty(n, is_mut))
             .join("\n\n")
     }
 
-    fn gen_visit_method_empty(&self, id: &Ident) -> String {
+    fn gen_visit_method_empty(&self, id: &Ident, is_mut: bool) -> String {
         let visit_name = visit_name(id);
         let ty = self.node_type_name(id);
-        format!("fn {}(&mut self, _n: &'ast {}) {{}}", visit_name, ty)
+        format!(
+            "fn {}(&mut self, _n: {}) {{}}",
+            visit_name,
+            wrap_mut(is_mut, &ty)
+        )
     }
 
-    fn gen_walk_method(&self, rule: &ast::Rule) -> String {
+    fn gen_walk_method(&self, rule: &ast::Rule, is_mut: bool) -> String {
         use ast::RuleKind::*;
 
         let walk_name = walk_name(&rule.name);
@@ -82,11 +90,7 @@ fn {}(&mut self, n: &'ast {}) {{
             Enum(s) => {
                 let ty_name = self.type_name(&rule.name);
                 let matches = s.lazy_map(|d| self.gen_visit_enum(d)).join("\n");
-                let match_target = if self.mir.is_boxed(&rule.name) {
-                    "&***n"
-                } else {
-                    "&**n"
-                };
+                let match_target = deref_mut(self.mir.is_boxed(&rule.name), is_mut, "n");
                 format!(
                     "use {}::*;\nmatch {} {{\n{}\n}}",
                     ty_name,
@@ -94,17 +98,21 @@ fn {}(&mut self, n: &'ast {}) {{
                     indent(&matches)
                 )
             }
-            Normal(s) => self.gen_visit_struct(s, "&n."),
+            Normal(s) => {
+                let prefix = if is_mut { "&mut n." } else { "&n." };
+                self.gen_visit_struct(s, prefix)
+            }
         };
         let ret = format!(
             r#"
 #[allow(unused)]
-pub fn {}<'a, V: Visitor<'a>>(v: &mut V, n: &'a {}) {{
+pub fn {}<'ast, V: {}>(v: &mut V, n: {}) {{
 {}
 }}
         "#,
             walk_name,
-            ty,
+            visitor_name(is_mut),
+            wrap_mut(is_mut, &ty),
             indent(&body)
         );
         trim(&ret)
@@ -194,4 +202,30 @@ fn walk_name(id: &Ident) -> String {
 
 fn visit_name(id: &Ident) -> String {
     format!("visit_{}", id.to_str())
+}
+
+fn visitor_name(is_mut: bool) -> &'static str {
+    if is_mut {
+        "VisitorMut"
+    } else {
+        "Visitor<'ast>"
+    }
+}
+
+fn wrap_mut(is_mut: bool, ty: &str) -> String {
+    if is_mut {
+        format!("&mut {}", ty)
+    } else {
+        format!("&'ast {}", ty)
+    }
+}
+
+fn deref_mut(is_boxed: bool, is_mut: bool, variable: &str) -> String {
+    let x = match (is_boxed, is_mut) {
+        (false, false) => "&**",
+        (false, true) => "&mut **",
+        (true, false) => "&***",
+        (true, true) => "&mut***",
+    };
+    format!("{}{}", x, variable)
 }

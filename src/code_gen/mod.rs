@@ -5,6 +5,7 @@ use crate::util::{camel_case, is_keyword, is_std_primary};
 
 pub mod gen_ast;
 pub mod gen_visit;
+pub mod gen_span;
 
 pub struct CodeGen<'ast> {
     mir: Mir<'ast>,

@@ -42,11 +42,11 @@ fn main() {
     let mir = mir::lower(&grammar).expect("lower ast to mir failed");
     let cg = CodeGen::new(mir);
 
-    let output = ".";
-    create_ast(&cg, output).expect("create ast file failed");
-    create_span(&cg, output).expect("create span file failed");
-    create_visitor(&cg, output).expect("create visitor file failed");
-    create_visitor_mut(&cg, output).expect("create visitor_mut file failed");
+    let out_dir = &opt.out_dir;
+    create_ast(&cg, out_dir).expect("create ast file failed");
+    create_span(&cg, out_dir).expect("create span file failed");
+    create_visitor(&cg, out_dir).expect("create visitor file failed");
+    create_visitor_mut(&cg, out_dir).expect("create visitor_mut file failed");
 
     println!("generate success.")
 }

@@ -1,10 +1,10 @@
 use std::error::Error;
 use std::fmt;
 use std::sync::Arc;
+use std::ops::Deref;
 
 use crate::span::Span;
 use crate::token::*;
-use std::ops::Deref;
 
 #[derive(Debug)]
 pub struct LexError {

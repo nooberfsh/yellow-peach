@@ -15,7 +15,7 @@ impl<'ast> CodeGen<'ast> {
         let leaf_nodes = (&self.mir.leaf_nodes)
             .lazy_map(|r| self.gen_leaf_node(r))
             .join("\n\n");
-        format!("{}\n{}\n\n{}", trim(META), body, leaf_nodes)
+        format!("{}\n{}\n\n{}\n", trim(META), body, leaf_nodes)
     }
 
     fn gen_leaf_node(&self, node: &Ident) -> String {

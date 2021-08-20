@@ -94,6 +94,16 @@ macro_rules! tri {
     };
 }
 
+macro_rules! expect_one_of {
+    ($parser:expr, $($l:path => $r:expr),*) => {{
+        let d = $parser.expect_one_of(&[$($l),*])?;
+        match d.kind {
+            $($l => $r,)*
+            _ => unreachable!(),
+        }
+    }}
+}
+
 impl Parser {
     pub fn new(mut lexer: Lexer) -> Result<Self> {
         let tokens = match lexer.tokens() {
@@ -215,19 +225,17 @@ impl Parser {
         ) -> Result<RuleKind> {
             let head = parser.make_node(NamedRuleBody { name, body });
             let mut alts = vec![head];
-            let token = parser.expect_one_of(&[TokenKind::Alt, TokenKind::Semicolon])?;
-            match token.kind {
+            expect_one_of! { parser,
                 TokenKind::Alt => {
                     let rest =
                         parser.parse_some(|p| p.parse_named_rule_body(), Some(TokenKind::Alt))?;
                     parser.expect(TokenKind::Semicolon)?;
                     alts.extend(rest);
-                }
+                },
                 TokenKind::Semicolon => {
                     // do nothing
                 }
-                _ => unreachable!(),
-            }
+            };
             Ok(RuleKind::Enum(alts))
         }
 
@@ -236,12 +244,11 @@ impl Parser {
             let name = parser.parse_ident()?;
             parser.expect(TokenKind::Colon)?;
 
-            let token = parser.expect_one_of(&[TokenKind::NumSign, TokenKind::Ident])?;
-            let kind = match token.kind {
+            let kind = expect_one_of! { parser,
                 TokenKind::NumSign => {
                     let name = parser.parse_ident()?;
                     parse_alts(parser, name, None)?
-                }
+                },
                 TokenKind::Ident => {
                     parser.back();
                     let body = parser.parse_rule_body()?;
@@ -253,7 +260,6 @@ impl Parser {
                         RuleKind::Normal(body)
                     }
                 }
-                _ => unreachable!(),
             };
             Ok(Rule { attrs, name, kind })
         })
@@ -295,17 +301,12 @@ impl Parser {
 
     pub fn parse_quantifier(&mut self) -> Result<N<Quantifier>> {
         self.parse(|parser| {
-            let d = parser.expect_one_of(&[
-                TokenKind::Question,
-                TokenKind::Asterisk,
-                TokenKind::Plus,
-            ])?;
-            let quantifier = match d.kind {
+            let quantifier = expect_one_of! { parser,
                 TokenKind::Question => Quantifier::Maybe,
                 TokenKind::Asterisk => Quantifier::Multi,
-                TokenKind::Plus => Quantifier::AtLeastOne,
-                _ => unreachable!(),
+                TokenKind::Plus => Quantifier::AtLeastOne
             };
+
             Ok(quantifier)
         })
     }

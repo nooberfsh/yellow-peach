@@ -47,6 +47,7 @@ fn main() {
     create_span(&cg, out_dir).expect("create span file failed");
     create_visitor(&cg, out_dir).expect("create visitor file failed");
     create_visitor_mut(&cg, out_dir).expect("create visitor_mut file failed");
+    create_parser(&cg, out_dir).expect("create parser file failed");
 
     println!("generate success.")
 }
@@ -76,5 +77,12 @@ fn create_visitor_mut<P: AsRef<Path>>(cg: &CodeGen, p: P) -> io::Result<()> {
     let d = cg.gen_visit(true);
     let mut p = p.as_ref().to_path_buf();
     p.push("visitor_mut.rs");
+    fs::write(p, &d)
+}
+
+fn create_parser<P: AsRef<Path>>(cg: &CodeGen, p: P) -> io::Result<()> {
+    let d = cg.gen_parse();
+    let mut p = p.as_ref().to_path_buf();
+    p.push("parser.rs");
     fs::write(p, &d)
 }

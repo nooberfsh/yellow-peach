@@ -1,10 +1,11 @@
+use std::collections::HashSet;
+
 use iterable::Iterable;
 
 use crate::ast;
 use crate::ast::{Ident, N};
 use crate::code_gen::CodeGen;
 use crate::util::{indent, trim};
-use std::collections::HashSet;
 
 impl<'ast> CodeGen<'ast> {
     pub fn gen_visit(&self, is_mut: bool) -> String {

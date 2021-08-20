@@ -5,3 +5,4 @@
 /span.rs
 /visitor.rs
 /visitor_mut.rs
+/parser.rs

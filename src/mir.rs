@@ -74,7 +74,7 @@ impl<'ast> BasicCheck<'ast> {
 
 impl<'ast> Visitor<'ast> for BasicCheck<'ast> {
     fn visit_ident(&mut self, n: &'ast N<Ident>) {
-        let s = n.to_str().chars().all(|c| c == '_' || c.is_lowercase());
+        let s = n.to_str().chars().all(|c| c == '_' || c.is_lowercase() || c.is_numeric());
         if !s {
             self.invalid_ids.push(n)
         }

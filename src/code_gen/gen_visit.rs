@@ -1,10 +1,11 @@
+use indexmap::set::IndexSet;
 use iterable::Iterable;
+use itertools::Itertools;
 
 use crate::ast;
 use crate::ast::{Ident, N};
 use crate::code_gen::CodeGen;
 use crate::util::{indent, trim};
-use std::collections::HashSet;
 
 impl<'ast> CodeGen<'ast> {
     pub fn gen_visit(&self, is_mut: bool) -> String {
@@ -65,9 +66,10 @@ fn {}(&mut self, n: {}) {{
         trim(&ret)
     }
 
-    fn gen_visit_method_empty_multi(&self, nodes: &HashSet<&N<Ident>>, is_mut: bool) -> String {
+    fn gen_visit_method_empty_multi(&self, nodes: &IndexSet<&N<Ident>>, is_mut: bool) -> String {
         nodes
-            .lazy_map(|n| self.gen_visit_method_empty(n, is_mut))
+            .iter()
+            .map(|n| self.gen_visit_method_empty(n, is_mut))
             .join("\n\n")
     }
 

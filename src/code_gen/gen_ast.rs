@@ -1,4 +1,5 @@
 use iterable::Iterable;
+use itertools::Itertools;
 
 use crate::ast;
 use crate::util::{indent, trim};
@@ -9,11 +10,12 @@ static META: &str = include_str!("../ast_meta.rs");
 
 impl<'ast> CodeGen<'ast> {
     pub fn gen_ast(&self) -> String {
-        let body = (&self.mir.rules)
-            .lazy_map(|r| self.gen_rule(r))
-            .join("\n\n");
-        let leaf_nodes = (&self.mir.leaf_nodes)
-            .lazy_map(|r| self.gen_leaf_node(r))
+        let body = self.mir.rules.iter().map(|r| self.gen_rule(r)).join("\n\n");
+        let leaf_nodes = self
+            .mir
+            .leaf_nodes
+            .iter()
+            .map(|r| self.gen_leaf_node(r))
             .join("\n\n");
         format!("{}\n{}\n\n{}\n", trim(META), body, leaf_nodes)
     }

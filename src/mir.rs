@@ -1,5 +1,5 @@
-use std::collections::{HashMap, HashSet};
-
+use indexmap::map::IndexMap;
+use indexmap::set::IndexSet;
 use iterable::Iterable;
 
 use crate::ast;
@@ -10,11 +10,11 @@ use crate::visit::{walk_rule, Visitor};
 #[derive(Debug, Clone)]
 pub struct Mir<'ast> {
     pub boxed_rules: Vec<&'ast N<Ident>>,
-    pub rule_map: HashMap<String, &'ast N<ast::Rule>>,
+    pub rule_map: IndexMap<String, &'ast N<ast::Rule>>,
     pub rules: &'ast Vec<N<ast::Rule>>,
-    pub leaf_nodes: HashSet<&'ast N<Ident>>,
-    pub reserved_nodes: HashSet<&'ast N<ast::Ident>>,
-    pub std_primary_nodes: HashSet<&'ast N<ast::Ident>>,
+    pub leaf_nodes: IndexSet<&'ast N<Ident>>,
+    pub reserved_nodes: IndexSet<&'ast N<ast::Ident>>,
+    pub std_primary_nodes: IndexSet<&'ast N<ast::Ident>>,
 }
 
 #[derive(Debug, Clone)]
@@ -74,7 +74,10 @@ impl<'ast> BasicCheck<'ast> {
 
 impl<'ast> Visitor<'ast> for BasicCheck<'ast> {
     fn visit_ident(&mut self, n: &'ast N<Ident>) {
-        let s = n.to_str().chars().all(|c| c == '_' || c.is_lowercase() || c.is_numeric());
+        let s = n
+            .to_str()
+            .chars()
+            .all(|c| c == '_' || c.is_lowercase() || c.is_numeric());
         if !s {
             self.invalid_ids.push(n)
         }
@@ -92,16 +95,16 @@ impl<'ast> Visitor<'ast> for BasicCheck<'ast> {
 #[derive(Debug, Clone)]
 struct MirBuilder<'ast> {
     boxed_rules: Vec<&'ast N<Ident>>,
-    rule_map: HashMap<String, &'ast N<ast::Rule>>,
+    rule_map: IndexMap<String, &'ast N<ast::Rule>>,
     rules: &'ast Vec<N<ast::Rule>>,
-    leaf_nodes: HashSet<&'ast N<ast::Ident>>,
-    reserved_nodes: HashSet<&'ast N<ast::Ident>>,
-    std_primary_nodes: HashSet<&'ast N<ast::Ident>>,
+    leaf_nodes: IndexSet<&'ast N<ast::Ident>>,
+    reserved_nodes: IndexSet<&'ast N<ast::Ident>>,
+    std_primary_nodes: IndexSet<&'ast N<ast::Ident>>,
 }
 
 impl<'ast> MirBuilder<'ast> {
     fn new(grammar: &'ast N<Grammar>) -> Self {
-        let mut rule_map = HashMap::new();
+        let mut rule_map = IndexMap::new();
         for r in &grammar.rules {
             let name = r.name.to_str().to_string();
             rule_map.insert(name, r);
@@ -109,9 +112,9 @@ impl<'ast> MirBuilder<'ast> {
         MirBuilder {
             rule_map,
             rules: &grammar.rules,
-            leaf_nodes: HashSet::new(),
-            reserved_nodes: HashSet::new(),
-            std_primary_nodes: HashSet::new(),
+            leaf_nodes: IndexSet::new(),
+            reserved_nodes: IndexSet::new(),
+            std_primary_nodes: IndexSet::new(),
             boxed_rules: vec![],
         }
     }

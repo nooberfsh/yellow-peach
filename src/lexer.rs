@@ -3,7 +3,8 @@ use std::fmt;
 use std::ops::Deref;
 use std::sync::Arc;
 
-use crate::span::Span;
+use reacto::span::Span;
+
 use crate::token::*;
 
 #[derive(Debug)]

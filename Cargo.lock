@@ -132,6 +132,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "reacto"
+version = "0.1.0"
+
+[[package]]
 name = "structopt"
 version = "0.3.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -206,5 +210,6 @@ dependencies = [
  "indexmap",
  "iterable",
  "itertools 0.10.1",
+ "reacto",
  "structopt",
 ]

@@ -4,7 +4,6 @@ use crate::mir::Mir;
 use crate::util::{camel_case, is_keyword, is_std_primary};
 
 pub mod gen_ast;
-pub mod gen_span;
 pub mod gen_visit;
 
 pub struct CodeGen<'ast> {

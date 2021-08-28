@@ -10,3 +10,4 @@ indexmap = "1.7.0"
 iterable = "0.4.1"
 itertools = "0.10.1"
 structopt = { version = "0.3", default-features = false }
+reacto = {path = "/home/tom/hdx/rust/reacto"}

@@ -14,7 +14,6 @@ pub mod code_gen;
 pub mod lexer;
 pub mod mir;
 pub mod parser;
-pub mod span;
 pub mod token;
 pub mod util;
 pub mod visit;
@@ -44,7 +43,6 @@ fn main() {
 
     let out_dir = &opt.out_dir;
     create_ast(&cg, out_dir).expect("create ast file failed");
-    create_span(&cg, out_dir).expect("create span file failed");
     create_visitor(&cg, out_dir).expect("create visitor file failed");
     create_visitor_mut(&cg, out_dir).expect("create visitor_mut file failed");
 
@@ -55,13 +53,6 @@ fn create_ast<P: AsRef<Path>>(cg: &CodeGen, p: P) -> io::Result<()> {
     let d = cg.gen_ast();
     let mut p = p.as_ref().to_path_buf();
     p.push("ast.rs");
-    fs::write(p, &d)
-}
-
-fn create_span<P: AsRef<Path>>(cg: &CodeGen, p: P) -> io::Result<()> {
-    let d = cg.gen_span();
-    let mut p = p.as_ref().to_path_buf();
-    p.push("span.rs");
     fs::write(p, &d)
 }
 

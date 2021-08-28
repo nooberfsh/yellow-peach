@@ -1,4 +1,4 @@
-use crate::span::Span;
+use reacto::span::Span;
 
 #[derive(Clone, Debug, Copy)]
 pub struct Token {

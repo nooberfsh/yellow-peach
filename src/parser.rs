@@ -3,12 +3,13 @@ use std::fmt;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
+use reacto::span::Span;
+
 use crate::ast::{
     Attr, Grammar, Ident, NamedRuleBody, NodeId, Quantifier, Rule, RuleBody, RuleElement, RuleKind,
     N,
 };
 use crate::lexer::{Chars, LexError, Lexer};
-use crate::span::Span;
 use crate::token::{Token, TokenKind};
 
 #[derive(Debug)]

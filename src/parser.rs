@@ -4,12 +4,14 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
 use reacto::span::Span;
+use reacto::chars::Chars;
+use reacto::lex::Lex;
 
 use crate::ast::{
     Attr, Grammar, Ident, NamedRuleBody, NodeId, Quantifier, Rule, RuleBody, RuleElement, RuleKind,
     N,
 };
-use crate::lexer::{Chars, LexError, Lexer};
+use crate::lexer::{LexError, Lexer};
 use crate::token::{Token, TokenKind};
 
 #[derive(Debug)]
@@ -117,7 +119,7 @@ impl Parser {
             }
         };
         let tokens = remove_junk(&tokens);
-        let chars = lexer.chars();
+        let chars = lexer.chars().clone();
         Ok(Parser {
             chars,
             tokens,

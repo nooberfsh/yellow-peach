@@ -1,15 +1,15 @@
 use std::error::Error;
 use std::fmt;
-use std::ops::Deref;
-use std::sync::Arc;
 
 use reacto::span::Span;
+use reacto::chars::Chars;
+use reacto::lex::Lex;
 
 use crate::token::*;
 
 #[derive(Debug)]
 pub struct LexError {
-    span: Option<Span>,
+    span: Span,
     kind: LexErrorKind,
 }
 
@@ -41,28 +41,14 @@ pub struct Lexer {
     start: usize,
 }
 
-#[derive(Debug, Clone)]
-pub struct Chars(Arc<Vec<char>>);
-
-impl Deref for Chars {
-    type Target = [char];
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
 impl Lexer {
     pub fn new(input: &str) -> Self {
-        let chars: Vec<_> = input.chars().collect();
+        let chars = Chars::new(input);
         Lexer {
-            chars: Chars(Arc::new(chars)),
+            chars,
             cursor: 0,
             start: 0,
         }
-    }
-
-    pub fn chars(&self) -> Chars {
-        self.chars.clone()
     }
 
     pub fn tokens(&mut self) -> Result<Vec<Token>> {
@@ -98,7 +84,7 @@ impl Lexer {
             }
             '"' => {
                 self.advance_while(|c| c != '"');
-                if !self.cmp_advance('"') {
+                if !self.advance_cmp('"') {
                     return Err(self.make_error(LexErrorKind::LitStringNotClosed));
                 }
                 TokenKind::LitString
@@ -113,70 +99,34 @@ impl Lexer {
         Ok(Some(self.make_token(ty)))
     }
 
-    fn eof(&self) -> bool {
-        self.cursor == self.chars.len()
-    }
-
-    fn advance_while(&mut self, p: impl Fn(char) -> bool) -> usize {
-        let mut num = 0;
-        while let Some(c) = self.peek() {
-            if !p(c) {
-                break;
-            }
-            self.cursor += 1;
-            num += 1;
-        }
-        num
-    }
-
-    fn advance(&mut self) -> Option<char> {
-        if self.eof() {
-            None
-        } else {
-            let c = self.chars[self.cursor];
-            self.cursor += 1;
-            Some(c)
-        }
-    }
-
-    fn advance_if(&mut self, p: impl Fn(char) -> bool) -> bool {
-        if let Some(c) = self.peek() {
-            if p(c) {
-                self.cursor += 1;
-                return true;
-            }
-        }
-        false
-    }
-
-    fn cmp_advance(&mut self, c: char) -> bool {
-        self.advance_if(|x| x == c)
-    }
-
-    fn peek(&self) -> Option<char> {
-        if self.eof() {
-            None
-        } else {
-            Some(self.chars[self.cursor])
-        }
-    }
-
-    fn make_token(&mut self, k: TokenKind) -> Token {
-        let ret = Token {
-            kind: k,
-            span: Span::new(self.start, self.cursor),
-        };
+    fn make_token(&mut self, kind: TokenKind) -> Token {
+        let span = self.span();
+        let ret = Token {kind, span};
         self.start = self.cursor;
         ret
     }
 
     fn make_error(&mut self, kind: LexErrorKind) -> LexError {
-        let span = if self.cursor == self.start {
-            None
-        } else {
-            Some(Span::new(self.start, self.cursor))
-        };
+        let span = self.span();
         LexError { span, kind }
+    }
+}
+
+impl Lex for Lexer {
+    fn chars(&self) -> &Chars {
+        &self.chars
+    }
+
+    fn cursor(&self) -> usize {
+        self.cursor
+    }
+
+    fn start(&self) -> usize {
+        self.start
+    }
+
+    fn inc_cursor(&mut self) {
+        self.cursor += 1
     }
 }
 

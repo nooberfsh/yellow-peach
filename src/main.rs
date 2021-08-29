@@ -34,17 +34,17 @@ struct Opt {
 fn main() {
     let opt = Opt::from_args();
 
-    let s = std::fs::read_to_string(&opt.grammar_path).expect("read grammar filed failed");
-    let lexer = Lexer::new(&s);
-    let mut parser = Parser::new(lexer).expect("create parser failed");
-    let grammar = parser.parse_grammar().expect("parse grammar failed");
-    let mir = mir::lower(&grammar).expect("lower ast to mir failed");
-    let cg = CodeGen::new(mir);
-
-    let out_dir = &opt.out_dir;
-    create_ast(&cg, out_dir).expect("create ast file failed");
-    create_visitor(&cg, out_dir).expect("create visitor file failed");
-    create_visitor_mut(&cg, out_dir).expect("create visitor_mut file failed");
+    // let s = std::fs::read_to_string(&opt.grammar_path).expect("read grammar filed failed");
+    // let lexer = Lexer::new(&s);
+    // let mut parser = Parser::new(lexer).expect("create parser failed");
+    // let grammar = parser.parse_grammar().expect("parse grammar failed");
+    // let mir = mir::lower(&grammar).expect("lower ast to mir failed");
+    // let cg = CodeGen::new(mir);
+    //
+    // let out_dir = &opt.out_dir;
+    // create_ast(&cg, out_dir).expect("create ast file failed");
+    // create_visitor(&cg, out_dir).expect("create visitor file failed");
+    // create_visitor_mut(&cg, out_dir).expect("create visitor_mut file failed");
 
     println!("generate success.")
 }

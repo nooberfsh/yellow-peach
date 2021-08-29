@@ -3,20 +3,21 @@ use std::fmt;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
-use reacto::span::Span;
+use reacto::span::{Span, S};
 use reacto::chars::Chars;
 use reacto::lex::Lex;
+use reacto::ast::N;
 
 use crate::ast::{
-    Attr, Grammar, Ident, NamedRuleBody, NodeId, Quantifier, Rule, RuleBody, RuleElement, RuleKind,
-    N,
+    Attr, Grammar, Ident, NamedRuleBody, Quantifier, Rule, RuleBody, RuleElement, RuleKind,
 };
 use crate::lexer::{LexError, Lexer};
-use crate::token::{Token, TokenKind};
+use crate::token::Token;
+use reacto::parse::{ParseCtx, Parse};
 
 #[derive(Debug)]
 pub struct ParseError {
-    span: Option<Span>,
+    span: Span,
     kind: ParseErrorKind,
 }
 
@@ -36,9 +37,9 @@ impl Error for ParseError {
 pub enum ParseErrorKind {
     LexError(LexError),
     //(expected, found?), None means eof
-    UnexpectedToken(TokenKind, Option<Token>),
+    UnexpectedToken(Token, Option<Token>),
     //(Vec<expected>, found?),
-    UnexpectedTokenMulti(Vec<TokenKind>, Option<Token>),
+    UnexpectedTokenMulti(Vec<Token>, Option<Token>),
     // (sep, error)
     DuplicatedSepOrParseError(Token, Box<ParseError>),
     Eof,
@@ -47,54 +48,19 @@ pub enum ParseErrorKind {
 pub type Result<T> = std::result::Result<T, ParseError>;
 
 #[derive(Clone, Debug)]
-struct IdGen {
-    id: Arc<AtomicUsize>,
-}
-
-impl IdGen {
-    fn new() -> Self {
-        IdGen {
-            id: Arc::new(AtomicUsize::new(0)),
-        }
-    }
-
-    fn next(&self) -> NodeId {
-        let id = self.id.fetch_add(1, Ordering::Relaxed);
-        NodeId(id)
-    }
-}
-
-#[derive(Clone, Debug)]
 pub struct Parser {
-    chars: Chars,
-    tokens: Vec<Token>,
-    id_gen: IdGen,
-    // state
-    call_stack: Vec<usize>,
-    cursor: usize,
+    ctx: ParseCtx<Token>,
 }
 
-fn remove_junk(tokens: &[Token]) -> Vec<Token> {
+fn remove_junk(tokens: &[S<Token>]) -> Vec<S<Token>> {
     let mut ret = vec![];
     for t in tokens {
-        match t.kind {
-            TokenKind::Whitespace(_) => {}
+        match t.tok {
+            Token::Whitespace(_) => {}
             _ => ret.push(*t),
         }
     }
     ret
-}
-
-macro_rules! tri {
-    ($p:expr, $c:expr, $e:expr) => {
-        match $e {
-            Ok(d) => d,
-            Err(e) => {
-                $p.cursor = $c;
-                return Err(e);
-            }
-        }
-    };
 }
 
 macro_rules! expect_one_of {
@@ -107,110 +73,30 @@ macro_rules! expect_one_of {
     }}
 }
 
+macro_rules! parse_some {
+    ($parser:expr, $f:ident, $sep:tt) => {{
+        let head = $parser.$f()?;
+        let mut ret = vec![head];
+        while $parser.cmp_advance(T!$sep) {
+            let d = $parser.$f()?;
+            ret.push(d);
+        }
+        ret
+    }}
+}
+
+
 impl Parser {
-    pub fn new(mut lexer: Lexer) -> Result<Self> {
-        let tokens = match lexer.tokens() {
-            Ok(d) => d,
-            Err(e) => {
-                return Err(ParseError {
-                    span: None,
-                    kind: ParseErrorKind::LexError(e),
-                })
-            }
-        };
+    pub fn new(chars: Chars, tokens: Vec<S<Token>>) -> Self {
         let tokens = remove_junk(&tokens);
-        let chars = lexer.chars().clone();
-        Ok(Parser {
-            chars,
-            tokens,
-            id_gen: IdGen::new(),
-            call_stack: vec![],
-            cursor: 0,
-        })
+        let ctx = ParseCtx::new(chars, tokens);
+        Parser {ctx}
     }
 }
 
 impl Parser {
-    fn parse<T>(&mut self, f: impl Fn(&mut Parser) -> Result<T>) -> Result<N<T>> {
-        let cursor = self.cursor;
-        self.call_stack.push(self.cursor);
-
-        if self.eof() {
-            let e = self.make_err(ParseErrorKind::Eof);
-            self.pop_stack();
-            return e;
-        }
-
-        let ret = match f(self) {
-            Ok(d) => Ok(self.make_node(d)),
-            Err(e) => {
-                self.cursor = cursor;
-                Err(e)
-            }
-        };
-        self.pop_stack();
-        ret
-    }
-
-    // zero or more
-    fn parse_many<T>(
-        &mut self,
-        f: impl Fn(&mut Parser) -> Result<T>,
-        sep: Option<TokenKind>,
-    ) -> Result<Vec<T>> {
-        let cursor = self.cursor;
-        let mut ret = match f(self) {
-            Ok(d) => vec![d],
-            Err(_) => {
-                self.cursor = cursor;
-                return Ok(vec![]);
-            }
-        };
-
-        if let Some(d) = sep {
-            while self.cmp_advance(d) {
-                match f(self) {
-                    Ok(d) => ret.push(d),
-                    Err(e) => {
-                        self.back();
-                        let sep = self.peek().unwrap();
-                        self.cursor = cursor;
-                        return self
-                            .make_err(ParseErrorKind::DuplicatedSepOrParseError(sep, Box::new(e)));
-                    }
-                }
-            }
-        } else {
-            while let Ok(d) = f(self) {
-                ret.push(d)
-            }
-        }
-
-        Ok(ret)
-    }
-
-    // one or more
-    fn parse_some<T>(
-        &mut self,
-        f: impl Fn(&mut Parser) -> Result<T>,
-        sep: Option<TokenKind>,
-    ) -> Result<Vec<T>> {
-        let cursor = self.cursor;
-        let d = tri!(self, cursor, f(self));
-        let mut ret = vec![d];
-
-        if let Some(sep) = sep {
-            if !self.cmp_advance(sep) {
-                return Ok(ret);
-            }
-        }
-        let rest = tri!(self, cursor, self.parse_many(f, sep));
-        ret.extend(rest);
-        Ok(ret)
-    }
-
     pub fn parse_grammar(&mut self) -> Result<N<Grammar>> {
-        self.parse(|parser| {
+        self.parse_n(|parser| {
             let mut rules = vec![];
             while !parser.eof() {
                 let rule = parser.parse_rule()?;
@@ -229,13 +115,13 @@ impl Parser {
             let head = parser.make_node(NamedRuleBody { name, body });
             let mut alts = vec![head];
             expect_one_of! { parser,
-                TokenKind::Alt => {
+                Token::Alt => {
                     let rest =
-                        parser.parse_some(|p| p.parse_named_rule_body(), Some(TokenKind::Alt))?;
-                    parser.expect(TokenKind::Semicolon)?;
+                        parser.parse_some(|p| p.parse_named_rule_body(), Some(Token::Alt))?;
+                    parser.expect(Token::Semicolon)?;
                     alts.extend(rest);
                 },
-                TokenKind::Semicolon => {
+                Token::Semicolon => {
                     // do nothing
                 }
             };
@@ -245,21 +131,21 @@ impl Parser {
         self.parse(|parser| {
             let attrs = parser.parse_many(|p| p.parse_attr(), None)?;
             let name = parser.parse_ident()?;
-            parser.expect(TokenKind::Colon)?;
+            parser.expect(Token::Colon)?;
 
             let kind = expect_one_of! { parser,
-                TokenKind::NumSign => {
+                Token::NumSign => {
                     let name = parser.parse_ident()?;
                     parse_alts(parser, name, None)?
                 },
-                TokenKind::Ident => {
+                Token::Ident => {
                     parser.back();
                     let body = parser.parse_rule_body()?;
-                    if parser.cmp_advance(TokenKind::NumSign) {
+                    if parser.cmp_advance(Token::NumSign) {
                         let name = parser.parse_ident()?;
                         parse_alts(parser, name, Some(body))?
                     } else {
-                        parser.expect(TokenKind::Semicolon)?;
+                        parser.expect(Token::Semicolon)?;
                         RuleKind::Normal(body)
                     }
                 }
@@ -271,7 +157,7 @@ impl Parser {
     pub fn parse_named_rule_body(&mut self) -> Result<N<NamedRuleBody>> {
         self.parse(|parser| {
             let body = parser.parse_rule_body().ok();
-            parser.expect(TokenKind::NumSign)?;
+            parser.expect(Token::NumSign)?;
             let name = parser.parse_ident()?;
             Ok(NamedRuleBody { name, body })
         })
@@ -287,7 +173,7 @@ impl Parser {
     pub fn parse_rule_element(&mut self) -> Result<N<RuleElement>> {
         self.parse(|parser| {
             let name = parser.parse_ident()?;
-            let (name, nt) = if parser.cmp_advance(TokenKind::Assign) {
+            let (name, nt) = if parser.cmp_advance(Token::Assign) {
                 let nt = parser.parse_ident()?;
                 (Some(name), nt)
             } else {
@@ -305,9 +191,9 @@ impl Parser {
     pub fn parse_quantifier(&mut self) -> Result<N<Quantifier>> {
         self.parse(|parser| {
             let quantifier = expect_one_of! { parser,
-                TokenKind::Question => Quantifier::Maybe,
-                TokenKind::Asterisk => Quantifier::Multi,
-                TokenKind::Plus => Quantifier::AtLeastOne
+                Token::Question => Quantifier::Maybe,
+                Token::Asterisk => Quantifier::Multi,
+                Token::Plus => Quantifier::AtLeastOne
             };
 
             Ok(quantifier)
@@ -316,7 +202,7 @@ impl Parser {
 
     pub fn parse_ident(&mut self) -> Result<N<Ident>> {
         self.parse(|parser| {
-            let d = parser.expect(TokenKind::Ident)?;
+            let d = parser.expect(Token::Ident)?;
             let name = parser.get_string(d.span);
             Ok(Ident { name })
         })
@@ -324,7 +210,7 @@ impl Parser {
 
     pub fn parse_attr(&mut self) -> Result<N<Attr>> {
         self.parse(|parser| {
-            let d = parser.expect(TokenKind::Attr)?;
+            let d = parser.expect(Token::Attr)?;
             let name = parser.get_string(d.span);
             let name = name.trim_matches('@').to_string();
             Ok(Attr { name })
@@ -333,7 +219,7 @@ impl Parser {
 }
 
 impl Parser {
-    fn expect(&mut self, expected: TokenKind) -> Result<Token> {
+    fn expect(&mut self, expected: Token) -> Result<Token> {
         let d = match self.advance() {
             Some(d) => d,
             None => return self.make_err(ParseErrorKind::UnexpectedToken(expected, None)),
@@ -346,7 +232,7 @@ impl Parser {
         }
     }
 
-    fn expect_one_of(&mut self, expected: &[TokenKind]) -> Result<Token> {
+    fn expect_one_of(&mut self, expected: &[Token]) -> Result<Token> {
         let d = match self.advance() {
             Some(d) => d,
             None => {
@@ -373,79 +259,26 @@ impl Parser {
     }
 }
 
+impl Parse  for Parser {
+    type Error = ParseError;
+    type Token = Token;
+
+    fn ctx(&self) -> &ParseCtx<Self::Token> {
+        &self.ctx
+    }
+
+    fn ctx_mut(&mut self) -> &mut ParseCtx<Self::Token> {
+        &mut self.ctx_mut
+    }
+
+    fn eof_error(&mut self) -> Result<()> {
+        let kind = ParseErrorKind::Eof;
+        let span = self.span();
+        Err(ParseError {kind, span})
+    }
+}
+
 impl Parser {
-    fn assert_call_stack(&self) {
-        assert!(!self.call_stack.is_empty(), "not int call stack")
-    }
-
-    fn pop_stack(&mut self) -> Option<usize> {
-        self.call_stack.pop()
-    }
-
-    fn eof(&self) -> bool {
-        self.cursor == self.tokens.len()
-    }
-
-    fn peek(&self) -> Option<Token> {
-        if self.eof() {
-            None
-        } else {
-            Some(self.tokens[self.cursor])
-        }
-    }
-
-    fn back(&mut self) {
-        self.cursor -= 1;
-    }
-
-    fn advance_if(&mut self, p: impl Fn(TokenKind) -> bool) -> bool {
-        if let Some(c) = self.peek() {
-            if p(c.kind) {
-                self.cursor += 1;
-                return true;
-            }
-        }
-        false
-    }
-
-    fn cmp_advance(&mut self, ty: TokenKind) -> bool {
-        self.advance_if(|x| x == ty)
-    }
-
-    fn advance(&mut self) -> Option<Token> {
-        if self.eof() {
-            None
-        } else {
-            let c = self.tokens[self.cursor];
-            self.cursor += 1;
-            Some(c)
-        }
-    }
-
-    fn current_span(&self) -> Option<Span> {
-        if let Some(start) = self.call_stack.last() {
-            if start < &self.cursor {
-                let start = self.tokens[*start].span;
-                let end = self.tokens[self.cursor - 1].span;
-                Some(start.merge(end))
-            } else {
-                None
-            }
-        } else {
-            None
-        }
-    }
-
-    fn make_node<T>(&self, t: T) -> N<T> {
-        self.assert_call_stack();
-        assert!(self.call_stack.last().unwrap() < &self.cursor);
-
-        let id = self.id_gen.next();
-        let span = self.current_span().unwrap();
-        let ret = N { id, span, t };
-        ret
-    }
-
     fn make_err<T>(&self, kind: ParseErrorKind) -> Result<T> {
         let span = self.current_span();
         Err(ParseError { span, kind })

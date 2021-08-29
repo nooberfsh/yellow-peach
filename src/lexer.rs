@@ -2,8 +2,7 @@ use std::error::Error;
 use std::fmt;
 
 use reacto::span::Span;
-use reacto::chars::Chars;
-use reacto::lex::Lex;
+use reacto::lex::{Lex, LexCtx};
 
 use crate::token::*;
 
@@ -11,18 +10,6 @@ use crate::token::*;
 pub struct LexError {
     span: Span,
     kind: LexErrorKind,
-}
-
-impl fmt::Display for LexError {
-    fn fmt(&self, _f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        todo!()
-    }
-}
-
-impl Error for LexError {
-    fn source(&self) -> Option<&(dyn Error + 'static)> {
-        todo!()
-    }
 }
 
 #[derive(Debug)]
@@ -34,76 +21,15 @@ enum LexErrorKind {
 
 pub type Result<T> = std::result::Result<T, LexError>;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Lexer {
-    chars: Chars,
-    cursor: usize,
-    start: usize,
+    ctx: LexCtx,
 }
 
 impl Lexer {
     pub fn new(input: &str) -> Self {
-        let chars = Chars::new(input);
-        Lexer {
-            chars,
-            cursor: 0,
-            start: 0,
-        }
-    }
-
-    pub fn tokens(&mut self) -> Result<Vec<Token>> {
-        let mut ret = vec![];
-        while let Some(t) = self.next()? {
-            ret.push(t);
-        }
-        Ok(ret)
-    }
-
-    pub fn next(&mut self) -> Result<Option<Token>> {
-        let c = match self.advance() {
-            Some(d) => d,
-            None => return Ok(None),
-        };
-
-        let ty = match c {
-            '?' => TokenKind::Question,
-            '+' => TokenKind::Plus,
-            '*' => TokenKind::Asterisk,
-            ':' => TokenKind::Colon,
-            ';' => TokenKind::Semicolon,
-            '#' => TokenKind::NumSign,
-            '|' => TokenKind::Alt,
-            '=' => TokenKind::Assign,
-            ' ' => TokenKind::Whitespace(Whitespace::Space),
-            '\n' => TokenKind::Whitespace(Whitespace::Newline),
-            '\r' => TokenKind::Whitespace(Whitespace::CarriageReturn),
-            '\t' => TokenKind::Whitespace(Whitespace::HorizontalTab),
-            '@' => {
-                self.advance_while(is_digit_letter);
-                TokenKind::Attr
-            }
-            '"' => {
-                self.advance_while(|c| c != '"');
-                if !self.advance_cmp('"') {
-                    return Err(self.make_error(LexErrorKind::LitStringNotClosed));
-                }
-                TokenKind::LitString
-            }
-            c if is_letter(c) => {
-                self.advance_while(is_digit_letter);
-                TokenKind::Ident
-            }
-            c if is_digit(c) => return Err(self.make_error(LexErrorKind::NameStartWithDigit(c))),
-            c => return Err(self.make_error(LexErrorKind::UnknownChar(c))),
-        };
-        Ok(Some(self.make_token(ty)))
-    }
-
-    fn make_token(&mut self, kind: TokenKind) -> Token {
-        let span = self.span();
-        let ret = Token {kind, span};
-        self.start = self.cursor;
-        ret
+        let ctx = LexCtx::new(input);
+        Lexer {ctx}
     }
 
     fn make_error(&mut self, kind: LexErrorKind) -> LexError {
@@ -113,20 +39,68 @@ impl Lexer {
 }
 
 impl Lex for Lexer {
-    fn chars(&self) -> &Chars {
-        &self.chars
+    type Token = Token;
+    type Error = LexError;
+
+    fn ctx(&self) -> &LexCtx {
+        &self.ctx
     }
 
-    fn cursor(&self) -> usize {
-        self.cursor
+    fn ctx_mut(&mut self) -> &mut LexCtx {
+        &mut self.ctx
     }
 
-    fn start(&self) -> usize {
-        self.start
+   fn next(&mut self) -> Result<Option<Token>> {
+        let c = match self.advance() {
+            Some(d) => d,
+            None => return Ok(None),
+        };
+
+        let ty = match c {
+            '?' => Token::Question,
+            '+' => Token::Plus,
+            '*' => Token::Asterisk,
+            ':' => Token::Colon,
+            ';' => Token::Semicolon,
+            '#' => Token::NumSign,
+            '|' => Token::Alt,
+            '=' => Token::Assign,
+            ' ' => Token::Whitespace(Whitespace::Space),
+            '\n' => Token::Whitespace(Whitespace::Newline),
+            '\r' => Token::Whitespace(Whitespace::CarriageReturn),
+            '\t' => Token::Whitespace(Whitespace::HorizontalTab),
+            '@' => {
+                self.advance_while(is_digit_letter);
+                Token::Attr
+            }
+            '"' => {
+                self.advance_while(|c| c != '"');
+                if !self.advance_cmp('"') {
+                    return Err(self.make_error(LexErrorKind::LitStringNotClosed));
+                }
+                Token::LitString
+            }
+            c if is_letter(c) => {
+                self.advance_while(is_digit_letter);
+                Token::Ident
+            }
+            c if is_digit(c) => return Err(self.make_error(LexErrorKind::NameStartWithDigit(c))),
+            c => return Err(self.make_error(LexErrorKind::UnknownChar(c))),
+        };
+        Ok(Some(ty))
     }
 
-    fn inc_cursor(&mut self) {
-        self.cursor += 1
+}
+
+impl fmt::Display for LexError {
+    fn fmt(&self, _f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        todo!()
+    }
+}
+
+impl Error for LexError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        todo!()
     }
 }
 

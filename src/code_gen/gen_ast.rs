@@ -6,8 +6,6 @@ use crate::util::{indent, trim};
 
 use super::*;
 
-static META: &str = include_str!("../ast_meta.rs");
-
 impl<'ast> CodeGen<'ast> {
     pub fn gen_ast(&self) -> String {
         let body = self.mir.rules.iter().map(|r| self.gen_rule(r)).join("\n\n");
@@ -17,7 +15,7 @@ impl<'ast> CodeGen<'ast> {
             .iter()
             .map(|r| self.gen_leaf_node(r))
             .join("\n\n");
-        format!("{}\n{}\n\n{}\n", trim(META), body, leaf_nodes)
+        format!("{}\n\n{}\n", body, leaf_nodes)
     }
 
     fn gen_leaf_node(&self, node: &Ident) -> String {

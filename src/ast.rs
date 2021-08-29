@@ -1,4 +1,4 @@
-include!("ast_meta.rs");
+use reacto::ast::N;
 
 #[derive(Debug, Clone)]
 pub struct Grammar {
@@ -39,7 +39,7 @@ pub struct RuleElement {
 impl RuleElement {
     pub fn has_many(&self) -> bool {
         if let Some(d) = &self.quantifier {
-            if d.t == Quantifier::Multi || d.t == Quantifier::AtLeastOne {
+            if d.data == Quantifier::Multi || d.data == Quantifier::AtLeastOne {
                 return true;
             }
         }

@@ -1,9 +1,10 @@
 use indexmap::set::IndexSet;
 use iterable::Iterable;
 use itertools::Itertools;
+use reacto::ast::N;
 
 use crate::ast;
-use crate::ast::{Ident, N};
+use crate::ast::Ident;
 use crate::code_gen::CodeGen;
 use crate::util::{indent, trim};
 
@@ -169,7 +170,7 @@ pub fn {}<'ast, V: {}>(v: &mut V, n: {}) {{
         use ast::Quantifier::*;
         let visit_name = visit_name(&ele.nt);
         let ret = if let Some(d) = &ele.quantifier {
-            match &d.t {
+            match &d.data {
                 Maybe => {
                     format!(
                         r#"

@@ -1,9 +1,10 @@
 use indexmap::map::IndexMap;
 use indexmap::set::IndexSet;
 use iterable::Iterable;
+use reacto::ast::N;
 
 use crate::ast;
-use crate::ast::{Grammar, Ident, N};
+use crate::ast::{Grammar, Ident};
 use crate::util::is_std_primary;
 use crate::visit::{walk_rule, Visitor};
 

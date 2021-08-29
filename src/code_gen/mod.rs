@@ -58,7 +58,7 @@ impl<'ast> CodeGen<'ast> {
         use ast::Quantifier::*;
         let ty = self.node_type_name(&ele.nt);
         if let Some(d) = &ele.quantifier {
-            match &d.t {
+            match &d.data {
                 Multi | AtLeastOne => format!("Vec<{}>", ty),
                 Maybe => format!("Option<{}>", ty),
             }

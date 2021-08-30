@@ -2,11 +2,11 @@ use std::error::Error;
 use std::fmt;
 
 use iterable::Iterable;
-use reacto::span::{Span, S};
-use reacto::lex::Lex;
 use reacto::ast::N;
+use reacto::lex::Lex;
+use reacto::parse::{Parse, ParseCtx};
+use reacto::span::{Span, S};
 use reacto::*;
-use reacto::parse::{ParseCtx, Parse};
 
 use crate::ast::{
     Attr, Grammar, Ident, NamedRuleBody, Quantifier, Rule, RuleBody, RuleElement, RuleKind,
@@ -62,21 +62,20 @@ fn remove_junk(tokens: &[S<Token>]) -> Vec<S<Token>> {
     ret
 }
 
-
 impl Parser {
-    pub fn new(mut lexer: Lexer) -> Result<Self>  {
+    pub fn new(mut lexer: Lexer) -> Result<Self> {
         let tokens = match lexer.tokens() {
             Ok(d) => d,
             Err(e) => {
                 let span = None;
                 let kind = ParseErrorKind::LexError(e);
-                return Err(ParseError{span ,kind})
+                return Err(ParseError { span, kind });
             }
         };
         let chars = lexer.chars();
         let tokens = remove_junk(&tokens);
         let ctx = ParseCtx::new(chars.clone(), tokens);
-        Ok(Parser {ctx})
+        Ok(Parser { ctx })
     }
 }
 
@@ -203,7 +202,7 @@ impl Parser {
     }
 }
 
-impl Parse  for Parser {
+impl Parse for Parser {
     type Error = ParseError;
     type Token = Token;
 
@@ -222,7 +221,7 @@ impl Parse  for Parser {
             None
         };
         let kind = ParseErrorKind::UnexpectedToken(expected, found);
-        ParseError{span ,kind}
+        ParseError { span, kind }
     }
 
     fn expect_one_of_err(
@@ -235,7 +234,7 @@ impl Parse  for Parser {
         } else {
             None
         };
-        let kind = ParseErrorKind::UnexpectedTokenMulti(expected.map(|t|t.clone()), found);
-        ParseError{span ,kind}
+        let kind = ParseErrorKind::UnexpectedTokenMulti(expected.map(|t| t.clone()), found);
+        ParseError { span, kind }
     }
 }

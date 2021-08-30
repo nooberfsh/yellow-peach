@@ -1,8 +1,8 @@
 use std::error::Error;
 use std::fmt;
 
-use reacto::span::Span;
 use reacto::lex::{Lex, LexCtx};
+use reacto::span::Span;
 
 use crate::token::*;
 
@@ -29,7 +29,7 @@ pub struct Lexer {
 impl Lexer {
     pub fn new(input: &str) -> Self {
         let ctx = LexCtx::new(input);
-        Lexer {ctx}
+        Lexer { ctx }
     }
 
     fn make_error(&mut self, kind: LexErrorKind) -> LexError {
@@ -50,7 +50,7 @@ impl Lex for Lexer {
         &mut self.ctx
     }
 
-   fn next(&mut self) -> Result<Option<Token>> {
+    fn next(&mut self) -> Result<Option<Token>> {
         let c = match self.advance() {
             Some(d) => d,
             None => return Ok(None),
@@ -89,7 +89,6 @@ impl Lex for Lexer {
         };
         Ok(Some(ty))
     }
-
 }
 
 impl fmt::Display for LexError {

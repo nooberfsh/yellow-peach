@@ -1,5 +1,3 @@
-use reacto::span::Span;
-
 #[derive(Clone, Debug, Copy, Eq, PartialEq)]
 pub enum Token {
     Question,

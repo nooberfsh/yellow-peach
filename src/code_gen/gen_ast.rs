@@ -2,7 +2,7 @@ use iterable::Iterable;
 use itertools::Itertools;
 
 use crate::ast;
-use crate::util::{indent, trim};
+use crate::util::indent;
 
 use super::*;
 
@@ -15,7 +15,8 @@ impl<'ast> CodeGen<'ast> {
             .iter()
             .map(|r| self.gen_leaf_node(r))
             .join("\n\n");
-        format!("{}\n\n{}\n", body, leaf_nodes)
+        let head = "use reacto::ast::N;";
+        format!("{}\n\n{}\n\n{}\n", head, body, leaf_nodes)
     }
 
     fn gen_leaf_node(&self, node: &Ident) -> String {

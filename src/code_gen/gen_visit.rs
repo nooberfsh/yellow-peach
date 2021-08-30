@@ -21,6 +21,8 @@ impl<'ast> CodeGen<'ast> {
             self.gen_visit_method_empty_multi(&self.mir.std_primary_nodes, is_mut);
         let visitor = format!(
             r#"
+use reacto::ast::N;
+
 use crate::ast::*;
 
 pub trait {}: Sized {{

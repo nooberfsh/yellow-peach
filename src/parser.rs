@@ -1,23 +1,22 @@
 use std::error::Error;
 use std::fmt;
-use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::Arc;
 
+use iterable::Iterable;
 use reacto::span::{Span, S};
-use reacto::chars::Chars;
 use reacto::lex::Lex;
 use reacto::ast::N;
+use reacto::*;
+use reacto::parse::{ParseCtx, Parse};
 
 use crate::ast::{
     Attr, Grammar, Ident, NamedRuleBody, Quantifier, Rule, RuleBody, RuleElement, RuleKind,
 };
 use crate::lexer::{LexError, Lexer};
 use crate::token::Token;
-use reacto::parse::{ParseCtx, Parse};
 
 #[derive(Debug)]
 pub struct ParseError {
-    span: Span,
+    span: Option<Span>,
     kind: ParseErrorKind,
 }
 
@@ -37,9 +36,9 @@ impl Error for ParseError {
 pub enum ParseErrorKind {
     LexError(LexError),
     //(expected, found?), None means eof
-    UnexpectedToken(Token, Option<Token>),
+    UnexpectedToken(Token, Option<S<Token>>),
     //(Vec<expected>, found?),
-    UnexpectedTokenMulti(Vec<Token>, Option<Token>),
+    UnexpectedTokenMulti(Vec<Token>, Option<S<Token>>),
     // (sep, error)
     DuplicatedSepOrParseError(Token, Box<ParseError>),
     Eof,
@@ -63,34 +62,21 @@ fn remove_junk(tokens: &[S<Token>]) -> Vec<S<Token>> {
     ret
 }
 
-macro_rules! expect_one_of {
-    ($parser:expr, $($l:path => $r:expr),*) => {{
-        let d = $parser.expect_one_of(&[$($l),*])?;
-        match d.kind {
-            $($l => $r,)*
-            _ => unreachable!(),
-        }
-    }}
-}
-
-macro_rules! parse_some {
-    ($parser:expr, $f:ident, $sep:tt) => {{
-        let head = $parser.$f()?;
-        let mut ret = vec![head];
-        while $parser.cmp_advance(T!$sep) {
-            let d = $parser.$f()?;
-            ret.push(d);
-        }
-        ret
-    }}
-}
-
 
 impl Parser {
-    pub fn new(chars: Chars, tokens: Vec<S<Token>>) -> Self {
+    pub fn new(mut lexer: Lexer) -> Result<Self>  {
+        let tokens = match lexer.tokens() {
+            Ok(d) => d,
+            Err(e) => {
+                let span = None;
+                let kind = ParseErrorKind::LexError(e);
+                return Err(ParseError{span ,kind})
+            }
+        };
+        let chars = lexer.chars();
         let tokens = remove_junk(&tokens);
-        let ctx = ParseCtx::new(chars, tokens);
-        Parser {ctx}
+        let ctx = ParseCtx::new(chars.clone(), tokens);
+        Ok(Parser {ctx})
     }
 }
 
@@ -116,8 +102,7 @@ impl Parser {
             let mut alts = vec![head];
             expect_one_of! { parser,
                 Token::Alt => {
-                    let rest =
-                        parser.parse_some(|p| p.parse_named_rule_body(), Some(Token::Alt))?;
+                    let rest = parse_some!(parser, parse_named_rule_body, Token::Alt);
                     parser.expect(Token::Semicolon)?;
                     alts.extend(rest);
                 },
@@ -128,20 +113,20 @@ impl Parser {
             Ok(RuleKind::Enum(alts))
         }
 
-        self.parse(|parser| {
-            let attrs = parser.parse_many(|p| p.parse_attr(), None)?;
+        self.parse_n(|parser| {
+            let attrs = parse_many_l1!(parser, parse_attr, Token::Attr);
             let name = parser.parse_ident()?;
             parser.expect(Token::Colon)?;
 
-            let kind = expect_one_of! { parser,
+            let kind = sat_one_of! { parser,
                 Token::NumSign => {
+                    parser.advance();
                     let name = parser.parse_ident()?;
                     parse_alts(parser, name, None)?
                 },
                 Token::Ident => {
-                    parser.back();
                     let body = parser.parse_rule_body()?;
-                    if parser.cmp_advance(Token::NumSign) {
+                    if parser.advance_cmp(Token::NumSign) {
                         let name = parser.parse_ident()?;
                         parse_alts(parser, name, Some(body))?
                     } else {
@@ -155,7 +140,7 @@ impl Parser {
     }
 
     pub fn parse_named_rule_body(&mut self) -> Result<N<NamedRuleBody>> {
-        self.parse(|parser| {
+        self.parse_n(|parser| {
             let body = parser.parse_rule_body().ok();
             parser.expect(Token::NumSign)?;
             let name = parser.parse_ident()?;
@@ -164,16 +149,16 @@ impl Parser {
     }
 
     pub fn parse_rule_body(&mut self) -> Result<N<RuleBody>> {
-        self.parse(|parser| {
-            let body = parser.parse_some(|p| p.parse_rule_element(), None)?;
+        self.parse_n(|parser| {
+            let body = parse_some_l1!(parser, parse_rule_element, Token::Ident);
             Ok(RuleBody { body })
         })
     }
 
     pub fn parse_rule_element(&mut self) -> Result<N<RuleElement>> {
-        self.parse(|parser| {
+        self.parse_n(|parser| {
             let name = parser.parse_ident()?;
-            let (name, nt) = if parser.cmp_advance(Token::Assign) {
+            let (name, nt) = if parser.advance_cmp(Token::Assign) {
                 let nt = parser.parse_ident()?;
                 (Some(name), nt)
             } else {
@@ -189,7 +174,7 @@ impl Parser {
     }
 
     pub fn parse_quantifier(&mut self) -> Result<N<Quantifier>> {
-        self.parse(|parser| {
+        self.parse_n(|parser| {
             let quantifier = expect_one_of! { parser,
                 Token::Question => Quantifier::Maybe,
                 Token::Asterisk => Quantifier::Multi,
@@ -201,7 +186,7 @@ impl Parser {
     }
 
     pub fn parse_ident(&mut self) -> Result<N<Ident>> {
-        self.parse(|parser| {
+        self.parse_n(|parser| {
             let d = parser.expect(Token::Ident)?;
             let name = parser.get_string(d.span);
             Ok(Ident { name })
@@ -209,53 +194,12 @@ impl Parser {
     }
 
     pub fn parse_attr(&mut self) -> Result<N<Attr>> {
-        self.parse(|parser| {
+        self.parse_n(|parser| {
             let d = parser.expect(Token::Attr)?;
             let name = parser.get_string(d.span);
             let name = name.trim_matches('@').to_string();
             Ok(Attr { name })
         })
-    }
-}
-
-impl Parser {
-    fn expect(&mut self, expected: Token) -> Result<Token> {
-        let d = match self.advance() {
-            Some(d) => d,
-            None => return self.make_err(ParseErrorKind::UnexpectedToken(expected, None)),
-        };
-        if d.kind == expected {
-            Ok(d)
-        } else {
-            let kind = ParseErrorKind::UnexpectedToken(expected, Some(d));
-            self.make_err(kind)
-        }
-    }
-
-    fn expect_one_of(&mut self, expected: &[Token]) -> Result<Token> {
-        let d = match self.advance() {
-            Some(d) => d,
-            None => {
-                return self.make_err(ParseErrorKind::UnexpectedTokenMulti(
-                    expected.to_vec(),
-                    None,
-                ))
-            }
-        };
-
-        if expected.iter().find(|e| *e == &d.kind).is_some() {
-            Ok(d)
-        } else {
-            self.make_err(ParseErrorKind::UnexpectedTokenMulti(
-                expected.to_vec(),
-                Some(d),
-            ))
-        }
-    }
-
-    fn get_string(&self, span: Span) -> String {
-        let s = &self.chars[span.start()..span.end()];
-        s.iter().collect()
     }
 }
 
@@ -268,19 +212,30 @@ impl Parse  for Parser {
     }
 
     fn ctx_mut(&mut self) -> &mut ParseCtx<Self::Token> {
-        &mut self.ctx_mut
+        &mut self.ctx
     }
 
-    fn eof_error(&mut self) -> Result<()> {
-        let kind = ParseErrorKind::Eof;
-        let span = self.span();
-        Err(ParseError {kind, span})
+    fn expect_err(&self, expected: Self::Token, found: Option<S<Self::Token>>) -> Self::Error {
+        let span = if let Some(d) = &found {
+            Some(d.span)
+        } else {
+            None
+        };
+        let kind = ParseErrorKind::UnexpectedToken(expected, found);
+        ParseError{span ,kind}
     }
-}
 
-impl Parser {
-    fn make_err<T>(&self, kind: ParseErrorKind) -> Result<T> {
-        let span = self.current_span();
-        Err(ParseError { span, kind })
+    fn expect_one_of_err(
+        &self,
+        expected: &[Self::Token],
+        found: Option<S<Self::Token>>,
+    ) -> Self::Error {
+        let span = if let Some(d) = &found {
+            Some(d.span)
+        } else {
+            None
+        };
+        let kind = ParseErrorKind::UnexpectedTokenMulti(expected.map(|t|t.clone()), found);
+        ParseError{span ,kind}
     }
 }

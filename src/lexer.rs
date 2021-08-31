@@ -8,7 +8,7 @@ use crate::token::*;
 
 #[derive(Debug)]
 pub struct LexError {
-    span: Span,
+    span: Option<Span>,
     kind: LexErrorKind,
 }
 

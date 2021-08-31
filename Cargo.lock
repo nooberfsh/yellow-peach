@@ -134,6 +134,7 @@ dependencies = [
 [[package]]
 name = "reacto"
 version = "0.1.0"
+source = "git+https://github.com/nooberfsh/reacto/#0ebcda2d63c44aba43087ba122de8776d37db8b0"
 
 [[package]]
 name = "structopt"

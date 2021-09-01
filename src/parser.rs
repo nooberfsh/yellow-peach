@@ -187,7 +187,7 @@ impl Parser {
     pub fn parse_ident(&mut self) -> Result<N<Ident>> {
         self.parse_n(|parser| {
             let d = parser.expect(Token::Ident)?;
-            let name = parser.get_string(d.span).unwrap();
+            let name = parser.chars().get_string(d.span).unwrap();
             Ok(Ident { name })
         })
     }
@@ -195,7 +195,7 @@ impl Parser {
     pub fn parse_attr(&mut self) -> Result<N<Attr>> {
         self.parse_n(|parser| {
             let d = parser.expect(Token::Attr)?;
-            let name = parser.get_string(d.span).unwrap();
+            let name = parser.chars().get_string(d.span).unwrap();
             let name = name.trim_matches('@').to_string();
             Ok(Attr { name })
         })

@@ -21,8 +21,16 @@ pub fn trim(s: &str) -> String {
 }
 
 pub fn indent(s: &str) -> String {
-    let lines: Vec<_> = s.lines().collect();
-    lines.map(|s| format!("    {}", s)).join("\n")
+    let mut ret = vec![];
+    for l in s.lines() {
+        let d = if l.trim().is_empty() {
+            String::new()
+        } else {
+            format!("    {}", l)
+        };
+        ret.push(d)
+    }
+    ret.join("\n")
 }
 
 pub fn camel_case(s: &str) -> String {

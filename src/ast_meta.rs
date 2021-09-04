@@ -3,6 +3,8 @@ use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::ops::Deref;
 use std::ops::DerefMut;
+use std::sync::Arc;
+use std::any::Any;
 
 use crate::span::Span;
 
@@ -14,6 +16,14 @@ pub struct N<T> {
     pub span: Span,
     pub id: NodeId,
     pub t: T,
+    pub metas: Vec<Arc<dyn Any>>,
+}
+
+impl<T> N<T> {
+    pub fn bind<A: Any>(&mut self, a: A) {
+        let meta = Arc::new(a);
+        self.metas.push(meta)
+    }
 }
 
 impl<T: fmt::Debug> fmt::Debug for N<T> {

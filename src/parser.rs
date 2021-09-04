@@ -439,7 +439,7 @@ impl Parser {
 
         let id = self.id_gen.next();
         let span = self.current_span().unwrap();
-        let ret = N { id, span, t };
+        let ret = N { id, span, t, metas: vec![] };
         ret
     }
 
